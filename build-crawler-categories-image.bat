@@ -1,0 +1,1 @@
+docker build -t product-crawler-categories -f crawler-categories-dockerfile .

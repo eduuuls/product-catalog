@@ -22,6 +22,8 @@ namespace ProductCatalog.Application.AutoMapper
             CreateMap<UpdateCategoryCommand, CategoryViewModel>();
             CreateMap<CategoryCreatedEvent, CategoryViewModel>();
             CreateMap<CategoryUpdatedEvent, CategoryViewModel>();
+            CreateMap<ProductCreatedEvent, ProductViewModel>();
+            
         }
     }
 }

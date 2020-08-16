@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using ProductCatalog.Infra.CrossCutting.IoC.Crawler;
 using ProductCatalog.Application.BackgroundServices;
 
-namespace ProductCatalog.Crawler
+namespace ProductCatalog.Crawler.Products
 {
     public class Program
     {

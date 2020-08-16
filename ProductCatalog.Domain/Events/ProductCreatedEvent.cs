@@ -25,6 +25,7 @@ namespace ProductCatalog.Domain.Events
             DataProvider = dataProvider;
             Detail = detail;
             Reviews = reviews;
+            TopicKey = "ProductTopic";
         }
 
         public Guid Id { get; protected set; }

@@ -29,7 +29,7 @@ namespace ProductCatalog.Application.Jobs
             _submarinoExternalService = submarinoExternalService;
         }
 
-        public async Task ImportCategoriesJob(DataProvider dataProvider)
+        public async Task ImportCategories(DataProvider dataProvider)
         {
             LogInfo($"[ProductCategoryJobs] Starting Job...");
 
@@ -57,29 +57,27 @@ namespace ProductCatalog.Application.Jobs
             
             var commands = americanasCategories.Select(category =>
             {
-                return new CreateNewCategoryCommand(category.Name, category.Description, category.Url, category.ImageUrl, 
+                return new CreateNewCategoryCommand(category.Name, category.SubType, category.Description, category.Url, category.ImageUrl, 
                                                         category.IsActive, category.NumberOfProducts, category.DataProvider);
             }).ToList();
-       
-            var task = Task.Run(async () =>
+
+            if (commands.Any())
+            {
+                try
                 {
-                    try
-                    {
-                        LogInfo($"[ProductCategoryJobs] Queueing categories: {commands.Count}");
+                    LogInfo($"[ProductCategoryJobs] Queueing categories: {commands.Count}");
 
-                        await _messagePublisher.Publish(new CreateNewCategoriesCommand(commands));
+                    var queueTask = _messagePublisher.Publish(new CreateNewCategoriesCommand(commands));
 
-                        LogInfo($"[ProductCategoryJobs] {commands.Count} categories queued!");
-                    }
-                    catch (Exception ex)
-                    {
-                        LogError($"[Error] {ex.Message}");
-                    }
-                });
+                    queueTask.Wait();
 
-            tasks.Add(task);
-
-            Task.WaitAll(tasks.ToArray());
+                    LogInfo($"[ProductCategoryJobs] {commands.Count} categories queued!");
+                }
+                catch (Exception ex)
+                {
+                    LogError($"[Error] {ex.Message}");
+                }
+            }
 
             LogInfo($"[ProductCategoryJobs] ImportFromAmericanas - Categories created...");
         }

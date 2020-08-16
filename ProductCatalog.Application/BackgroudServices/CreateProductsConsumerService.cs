@@ -18,17 +18,15 @@ using ProductCatalog.Infra.CrossCutting.Extensions;
 
 namespace ProductCatalog.Application.BackgroundServices
 {
-    public class CreateCategoryConsumerService : BackgroundService
+    public class CreateProductsConsumerService : BackgroundService
     {
         private readonly IMediatorHandler _mediatorHandler;
-        private readonly ILogger<CreateCategoryConsumerService> _logger;
         private readonly ISubscriptionClient _subscriptionClient;
-        public CreateCategoryConsumerService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
+        public CreateProductsConsumerService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
         {
             _mediatorHandler = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IMediatorHandler>();
-            _logger = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILogger<CreateCategoryConsumerService>>();
             
-            var categoryTopic = serviceBusConfig.Value.Topics.First(t => t.Key == "CategoryTopic");
+            var categoryTopic = serviceBusConfig.Value.Topics.First(t => t.Key == "ProductTopic");
 
             _subscriptionClient = new SubscriptionClient(connectionString: serviceBusConfig.Value.ConnectionString,
                                                 topicPath: categoryTopic.Name,
@@ -41,7 +39,7 @@ namespace ProductCatalog.Application.BackgroundServices
             {
                 var messageBody = Encoding.UTF8.GetString(message.Body).Decompress();
 
-                var createNewCategoriesCommand = JsonConvert.DeserializeObject<CreateNewCategoriesCommand>(messageBody);
+                var createNewCategoriesCommand = JsonConvert.DeserializeObject<CreateNewProductsCommand>(messageBody);
 
                 var commandTask = _mediatorHandler.SendCommand(createNewCategoriesCommand);
 

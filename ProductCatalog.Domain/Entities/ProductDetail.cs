@@ -1,4 +1,5 @@
-﻿using ProductCatalog.Domain.Entities.Base;
+﻿using Newtonsoft.Json;
+using ProductCatalog.Domain.Entities.Base;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -16,6 +17,7 @@ namespace ProductCatalog.Domain.Entities
         public string Model { get; set; }
         public string ReferenceModel { get; set; }
         public string OtherSpecs { get; set; }
+        [JsonIgnore]
         public Product Product { get; set; }
     }
 }

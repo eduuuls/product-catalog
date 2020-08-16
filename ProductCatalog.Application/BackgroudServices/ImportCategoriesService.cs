@@ -16,12 +16,10 @@ namespace ProductCatalog.Application.BackgroundServices
 {
     public class ImportCategoriesService : BackgroundService
     {
-        private readonly ILogger<ImportCategoriesService> _logger;
         private readonly ISubscriptionClient _subscriptionClient;
         private readonly IProductCategoryJob _productCategoryJobs;
         public ImportCategoriesService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
         {
-            _logger = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILogger<ImportCategoriesService>>();
             _productCategoryJobs = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IProductCategoryJob>();
 
             var categoryTopic = serviceBusConfig.Value.Topics.First(t => t.Key == "CategoryTopic");
@@ -39,7 +37,7 @@ namespace ProductCatalog.Application.BackgroundServices
 
                 var dataProvider = (DataProvider)Enum.Parse(typeof(DataProvider), command);
 
-                Task task = _productCategoryJobs.ImportCategoriesJob(dataProvider);
+                Task task = _productCategoryJobs.ImportCategories(dataProvider);
 
                 task.Wait();
 

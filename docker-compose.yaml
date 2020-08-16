@@ -2,7 +2,15 @@
 # Add the `-d` flag at the end for detached execution
 version: "3"
 services:
-  product-catalog-crawler:
-    image: product-catalog-crawler:latest
+  product-crawler-categories:
+    image: product-crawler-categories:latest
     ports:
       - "8081:8080"
+  product-crawler-products:
+    image: product-crawler-products:latest
+    ports:
+      - "8082:8080"
+  product-crawler-reviews:
+    image: product-crawler-reviews:latest
+    ports:
+      - "8083:8080"

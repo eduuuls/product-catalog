@@ -19,7 +19,11 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
                     .HasColumnType("varchar(80)")
                     .HasMaxLength(80)
                     .IsRequired();
-            
+
+            builder.Property("SubType")
+                    .HasColumnType("varchar(80)")
+                    .HasMaxLength(80);
+
             builder.Property("Description")
                     .HasColumnType("varchar(100)")
                     .HasMaxLength(100);

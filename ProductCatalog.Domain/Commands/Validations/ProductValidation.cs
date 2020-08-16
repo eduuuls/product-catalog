@@ -16,12 +16,21 @@ namespace ProductCatalog.Domain.Commands.Validations
         protected void ValidateName()
         {
             RuleFor(c => c.Name)
+                .NotNull()
                 .NotEqual(string.Empty);
         }
 
         protected void ValidateUrl()
         {
             RuleFor(c => c.Url)
+                .NotNull()
+                .NotEqual(string.Empty);
+        }
+
+        protected void ValidateImageUrl()
+        {
+            RuleFor(c => c.ImageUrl)
+                .NotNull()
                 .NotEqual(string.Empty);
         }
     }

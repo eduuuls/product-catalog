@@ -5,6 +5,6 @@ namespace ProductCatalog.Application.Interfaces
 {
     public interface IProductCategoryJob
     {
-        Task ImportCategoriesJob(DataProvider dataProvider);
+        Task ImportCategories(DataProvider dataProvider);
     }
 }

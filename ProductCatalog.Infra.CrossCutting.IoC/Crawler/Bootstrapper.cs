@@ -70,6 +70,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Crawler
         {
             services.AddScoped<IProductCategoryJob, CategoryJob>();
             services.AddScoped<IProductJob, ProductJob>();
+            services.AddScoped<IProductReviewsJob, ProductReviewsJob>();
         }
         public static void RegisterMessagePublishers(this IServiceCollection services)
         {

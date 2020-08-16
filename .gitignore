@@ -33,3 +33,5 @@
 /ProductCatalog.Infra.Data/obj
 /ProductCatalog.Infra.Data.Persistance/bin
 /ProductCatalog.Infra.Data.Persistance/obj
+/ProductCatalog.Crawler.ProductReviews/bin
+/ProductCatalog.Crawler.ProductReviews/obj

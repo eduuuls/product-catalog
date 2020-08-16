@@ -29,7 +29,7 @@ namespace ProductCatalog.Application.Jobs
             _messagePublisher = messagePublisher;
         }
 
-        public void ImportProductsJob(CategoryViewModel categoryViewModel)
+        public void ImportProducts(CategoryViewModel categoryViewModel)
         {
             LogInfo($"[ProductJobs] Starting Job...");
 
@@ -54,18 +54,19 @@ namespace ProductCatalog.Application.Jobs
         private void ImportFromAmericanas(CategoryViewModel categoryViewModel)
         {
             List<ProductDTO> products = new List<ProductDTO>();
-            List<Task> tasks = new List<Task>();
 
             int numberOfPages = categoryViewModel.NumberOfProducts / CATEGORY_PAGE_SIZE;
 
+            if (numberOfPages <= 0)
+                numberOfPages = 1;
             if (numberOfPages > MAX_PAGES)
                 numberOfPages = MAX_PAGES;
 
             LogInfo($"[ProductJobs] ImportFromAmericanas - Getting products...");
 
-            Parallel.For(1, numberOfPages, (index) =>
+            Parallel.For(0, numberOfPages, (index) =>
             {
-                var url = $"{categoryViewModel.Url}/pagina-{index}";
+                var url = $"{categoryViewModel.Url}/pagina-{index + 1}";
 
                 LogInfo($"[ProductJobs] ImportFromAmericanas - Getting products from category:{categoryViewModel.Name}...");
 
@@ -84,13 +85,15 @@ namespace ProductCatalog.Application.Jobs
                                                             product.ImageUrl, product.DataProvider, reviews);
             }).ToList();
 
-            var task = Task.Run(async () =>
+            if (commands.Any())
             {
                 try
                 {
                     LogInfo($"[ProductJobs] Queueing products: {commands.Count}");
 
-                    await _messagePublisher.Publish(new CreateNewProductsCommand(commands));
+                    var queueTask = _messagePublisher.Publish(new CreateNewProductsCommand(commands));
+
+                    queueTask.Wait();
 
                     LogInfo($"[ProductJobs] {commands.Count} products queued!");
                 }
@@ -98,11 +101,7 @@ namespace ProductCatalog.Application.Jobs
                 {
                     LogError($"[Error] {ex.Message}");
                 }
-            });
-
-            tasks.Add(task);
-
-            Task.WaitAll(tasks.ToArray());
+            }
 
             LogInfo($"[ProductJobs] ImportFromAmericanas - products created...");
         }

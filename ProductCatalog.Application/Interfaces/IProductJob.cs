@@ -4,6 +4,6 @@ namespace ProductCatalog.Application.Interfaces
 {
     public interface IProductJob
     {
-        void ImportProductsJob(CategoryViewModel categoryViewModel);
+        void ImportProducts(CategoryViewModel categoryViewModel);
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace ProductCatalog.Domain.Entities
 {
@@ -15,6 +16,7 @@ namespace ProductCatalog.Domain.Entities
         public short? Stars { get; set; }
         public string Result { get; set; }
         public bool? IsRecommended { get; set; }
+        [JsonIgnore]
         public Product Product { get; set; }
     }
 }

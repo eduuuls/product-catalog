@@ -27,7 +27,7 @@ namespace ProductCatalog.Domain.Commands
         {
             if (!message.IsValid()) return message.ValidationResult;
 
-            var category = new Category(Guid.NewGuid(), message.Name, message.Description, message.Url, 
+            var category = new Category(Guid.NewGuid(), message.Name, message.SubType, message.Description, message.Url, 
                                             message.ImageUrl, message.IsActive, message.NumberOfProducts, message.DataProvider);
 
             if (await _categoriesRepository.GetByKey(category.Name, category.DataProvider) != null)
@@ -36,9 +36,8 @@ namespace ProductCatalog.Domain.Commands
                 return ValidationResult;
             }
 
-            category.AddDomainEvent(new CategoryCreatedEvent(category.Id, category.Name, category.Description,
-                                            category.Url, category.ImageUrl, category.IsActive, category.NumberOfProducts, 
-                                                category.DataProvider));
+            category.AddDomainEvent(new CategoryCreatedEvent(category.Id, category.Name, category.SubType, category.Description,
+                                            category.Url, category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
 
             _categoriesRepository.Add(category);
 
@@ -53,9 +52,8 @@ namespace ProductCatalog.Domain.Commands
 
             category.IsActive = message.IsActive;
 
-            category.AddDomainEvent(new CategoryUpdatedEvent(category.Id, category.Name, category.Description,
-                                            category.Url, category.ImageUrl, category.IsActive, category.NumberOfProducts,
-                                                category.DataProvider));
+            category.AddDomainEvent(new CategoryUpdatedEvent(category.Id, category.Name, category.SubType, category.Description,
+                                            category.Url, category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
 
             _categoriesRepository.Update(category);
 

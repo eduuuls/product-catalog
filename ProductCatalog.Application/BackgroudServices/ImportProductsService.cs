@@ -21,13 +21,13 @@ namespace ProductCatalog.Application.BackgroundServices
     public class ImportProductsService : BackgroundService
     {
         private readonly IMapper _mapper;
-        private readonly ILogger<ImportCategoriesService> _logger;
+        private readonly ILogger<ImportProductsService> _logger;
         private readonly ISubscriptionClient _subscriptionClient;
         private readonly IProductJob _productJob;
         public ImportProductsService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
         {
             _mapper = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IMapper>();
-            _logger = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILogger<ImportCategoriesService>>();
+            _logger = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILogger<ImportProductsService>>();
             _productJob = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IProductJob>();
 
             var topic = serviceBusConfig.Value.Topics.First(t => t.Key == "CategoryTopic");
@@ -40,7 +40,7 @@ namespace ProductCatalog.Application.BackgroundServices
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("[ImportProductsService] Registering MessageHandler...");
-            _subscriptionClient.RegisterMessageHandler(async (message, token) =>
+            _subscriptionClient.RegisterMessageHandler((message, token) =>
             {
                 _logger.LogInformation($"[ImportProductsService] Processing CategoryUpdatedEvent message...");
 
@@ -54,10 +54,10 @@ namespace ProductCatalog.Application.BackgroundServices
 
                     var categoryViewModel = _mapper.Map<CategoryViewModel>(categoryUpdatedEvent);
 
-                    _productJob.ImportProductsJob(categoryViewModel);
+                    _productJob.ImportProducts(categoryViewModel);
                 }
 
-                await _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {

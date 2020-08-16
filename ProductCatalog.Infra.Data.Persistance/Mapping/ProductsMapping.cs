@@ -15,23 +15,23 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
             builder.Property(x => x.Id).ValueGeneratedNever();
             
             builder.Property("Name")
-                    .HasColumnType("varchar(100)")
+                    .HasColumnType("varchar(200)")
                     .IsRequired();
             
             builder.Property("ExternalId")
-                    .HasColumnType("varchar(30)")
+                    .HasColumnType("varchar(50)")
                     .HasMaxLength(30);
             
             builder.Property("Description")
-                    .HasColumnType("varchar(200)");
+                    .HasColumnType("varchar(300)");
             
             builder.Property("Url")
-                    .HasColumnType("varchar(600)")
-                    .HasMaxLength(600);
+                    .HasColumnType("varchar(1000)")
+                    .HasMaxLength(1000);
 
             builder.Property("ImageUrl")
-                    .HasColumnType("varchar(600)")
-                    .HasMaxLength(600)
+                    .HasColumnType("varchar(1000)")
+                    .HasMaxLength(1000)
                         .IsRequired();
 
             builder.Property("DataProvider");

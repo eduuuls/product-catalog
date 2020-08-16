@@ -27,7 +27,7 @@ namespace ProductCatalog.Domain.Commands
             {
                 if (!c.IsValid()) return;
 
-                var category = new Category(Guid.NewGuid(), c.Name, c.Description, c.Url, c.ImageUrl, c.IsActive, c.NumberOfProducts, c.DataProvider);
+                var category = new Category(Guid.NewGuid(), c.Name, c.SubType, c.Description, c.Url, c.ImageUrl, c.IsActive, c.NumberOfProducts, c.DataProvider);
 
                 var task = _categoriesRepository.GetByKey(category.Name, category.DataProvider);
 
@@ -42,15 +42,13 @@ namespace ProductCatalog.Domain.Commands
                     existingCategory.ImageUrl = category.ImageUrl;
                     existingCategory.Url = category.Url;
 
-                    category.AddDomainEvent(new CategoryUpdatedEvent(category.Id, category.Name, category.Description, category.Url,
-                                                                    category.ImageUrl, category.IsActive, category.NumberOfProducts,
-                                                                        category.DataProvider));
+                    category.AddDomainEvent(new CategoryUpdatedEvent(category.Id, category.Name, category.SubType, category.Description, category.Url,
+                                                                    category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
                 }
                 else
                 {
-                    category.AddDomainEvent(new CategoryCreatedEvent(category.Id, category.Name, category.Description, category.Url,
-                                                                    category.ImageUrl, category.IsActive, category.NumberOfProducts,
-                                                                        category.DataProvider));
+                    category.AddDomainEvent(new CategoryCreatedEvent(category.Id, category.Name, category.SubType, category.Description, category.Url,
+                                                                    category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
 
                     _categoriesRepository.Add(category);
                 }

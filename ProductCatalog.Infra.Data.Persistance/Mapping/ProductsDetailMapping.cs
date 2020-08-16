@@ -22,12 +22,12 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
                     .HasMaxLength(100);
             
             builder.Property("Manufacturer")
-                    .HasColumnType("varchar(100)")
-                    .HasMaxLength(100);
+                    .HasColumnType("varchar(200)")
+                    .HasMaxLength(200);
             
             builder.Property("Supplier")
-                    .HasColumnType("varchar(100)")
-                    .HasMaxLength(100);
+                    .HasColumnType("varchar(200)")
+                    .HasMaxLength(200);
             
             builder.Property("Model")
                     .HasColumnType("varchar(100)")
@@ -38,8 +38,8 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
                     .HasMaxLength(100);
             
             builder.Property("OtherSpecs")
-                    .HasColumnType("varchar(2000)")
-                    .HasMaxLength(2000);
+                    .HasColumnType("varchar(4000)")
+                    .HasMaxLength(4000);
             
             builder.Property("ProductId");
             

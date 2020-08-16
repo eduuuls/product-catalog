@@ -14,7 +14,7 @@ namespace ProductCatalog.Application.ViewModels
         public string Model { get; set; }
         public string ReferenceModel { get; set; }
         public double BestPrice { get; set; }
-        public Dictionary<string, string> OtherSpecs { get; set; }
+        public string OtherSpecs { get; set; }
 
     }
 }

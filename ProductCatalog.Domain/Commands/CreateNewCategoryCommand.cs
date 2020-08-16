@@ -15,11 +15,12 @@ namespace ProductCatalog.Domain.Commands
         {
 
         }
-        public CreateNewCategoryCommand(string name, string description, string url, string imageUrl, 
+        public CreateNewCategoryCommand(string name, string subType, string description, string url, string imageUrl, 
                                             bool isActive, int numberOfProducts, DataProvider dataProvider)
             : base(MessageDestination.DomainMessage, typeof(CreateNewCategoryCommand).Name)
         {
             Name = name;
+            SubType = subType;
             Description = description;
             Url = url;
             ImageUrl = imageUrl;

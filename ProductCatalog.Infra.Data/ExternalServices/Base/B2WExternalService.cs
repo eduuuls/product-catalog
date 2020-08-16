@@ -48,7 +48,6 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         }
         public async Task<List<CategoryDTO>> GetProductCategories()
         {
-            List<CategoryDTO> productCategories = new List<CategoryDTO>();
             HtmlDocument document = new HtmlDocument();
             List<HtmlNode> htmlNodes = new List<HtmlNode>();
 
@@ -74,10 +73,29 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             
             _logger.LogInformation($"Number of itens:{htmlNodes.Count}");
             _logger.LogInformation($"Converting resulting elements...");
+            
+            ConcurrentStack<CategoryDTO> categoriesToAdd = new ConcurrentStack<CategoryDTO>();
 
-            ConvertHtmlToCategories(productCategories, htmlNodes.ToList());
-            _logger.LogInformation($"Number of obtained categories:{productCategories.Count}");
-            return productCategories;
+            Parallel.ForEach(htmlNodes, element =>
+            {
+                var categoryElement = element.FirstChild
+                                                   .CssSelect("a")
+                                                       .FirstOrDefault();
+
+                ConvertHtmlToCategories(categoriesToAdd, categoryElement);
+            });
+
+            //foreach (var element in htmlNodes)
+            //{
+            //    var categoryElement = element.FirstChild
+            //                                      .CssSelect("a")
+            //                                          .FirstOrDefault();
+
+            //    ConvertHtmlToCategories(categoriesToAdd, categoryElement);
+            //}
+
+            _logger.LogInformation($"Number of obtained categories:{categoriesToAdd.Count}");
+            return categoriesToAdd.ToList();
         }
         public List<ProductDTO> GetProductsByCategory(Guid categoryId, string categoryUrl)
         {
@@ -127,59 +145,70 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             //}
             #endregion
 
-            _logger.LogInformation($"Extracting result elements...");
-            
-            var responseHtml = ExecuteHtmlRequest(categoryUrl);
+            _logger.LogInformation($"Executing HTML request on URL: {categoryUrl}");
 
-            var resultHtml = responseHtml.Result.CssSelect("div[class$=main-grid]")
-                                    .FirstOrDefault()
-                                        .CssSelect("div[class^=product-v2__ProductCardV2]")
-                                            .Select(element => {
-                                                return element.CssSelect("div[class^=RippleContainer]")
-                                                                    .FirstOrDefault()
-                                                                        .FirstChild;
+            var responseTask = ExecuteHtmlRequest(categoryUrl);
+
+            responseTask.Wait();
+
+            try
+            {
+                _logger.LogInformation($"Extracting result elements...");
+
+                var resultHtml = responseTask.Result.CssSelect("div[class$=main-grid]")
+                                        .FirstOrDefault()
+                                            .CssSelect("div[class^=product-v2__ProductCardV2]")
+                                                .Select(element =>
+                                                {
+                                                    return element.LastChild.FirstChild;
                                                 })
                                                 .ToList();
 
-            hasItens = resultHtml.Any();
+                hasItens = resultHtml.Any();
 
-            _logger.LogInformation($"Has itens:{hasItens}");
-            _logger.LogInformation($"Number of itens:{resultHtml.Count}");
+                _logger.LogInformation($"Has itens:{hasItens}");
+                _logger.LogInformation($"Number of itens:{resultHtml.Count}");
 
-            #region Commented Code
-            //Actions actions = new Actions(driver);
+                #region Commented Code
+                //Actions actions = new Actions(driver);
 
-            //foreach (var htmlElement in resultHtml)
-            //    actions = actions.MoveToElement(htmlElement);
+                //foreach (var htmlElement in resultHtml)
+                //    actions = actions.MoveToElement(htmlElement);
 
-            //_logger.LogInformation($"Performing navigation actions...");
-            //actions.Perform();
-            //actions.Perform();
-            //_logger.LogInformation($"Actions performed!");
-            #endregion
+                //_logger.LogInformation($"Performing navigation actions...");
+                //actions.Perform();
+                //actions.Perform();
+                //_logger.LogInformation($"Actions performed!");
+                #endregion
 
-            //resultElements.AddRange(resultHtml.Select(r => HtmlNode.CreateNode(r.GetAttribute("innerHTML"))));
+                _logger.LogInformation($"Number of resulted elements added: {resultElements.Count}");
+                _logger.LogInformation($"Converting resulting elements...");
 
-            _logger.LogInformation($"Number of resulted elements added: {resultElements.Count}");
-            _logger.LogInformation($"Converting resulting elements...");
+                Parallel.ForEach(resultHtml, element =>
+                {
+                    var result = ConvertHtmlToProduct(categoryId, element);
 
-            Parallel.ForEach(resultHtml, element =>
+                    if (result != null)
+                        products.Add(result);
+                });
+
+                _logger.LogInformation($"Number of obtained products:{products.Count}");
+
+                #region Test Code
+                //foreach (var element in resultElements)
+                //{
+                //    var result = await ConvertHtmlToProduct(element);
+
+                //    if (result != null)
+                //        products.Add(result);
+                //}
+                #endregion
+            }
+            catch(Exception ex)
             {
-                var result = ConvertHtmlToProduct(categoryId, element);
-
-                if (result != null)
-                    products.Add(result);
-            });
-            _logger.LogInformation($"Number of obtained products:{products.Count}");
-            #region Test Code
-            //foreach (var element in resultElements)
-            //{
-            //    var result = await ConvertHtmlToProduct(element);
-
-            //    if (result != null)
-            //        products.Add(result);
-            //}
-            #endregion
+                _logger.LogInformation($"Page has no items!");
+                _logger.LogError(ex, $"Error occurred while getting products: {ex.Message}");
+            }
 
             return products;
         }
@@ -189,73 +218,85 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
             string reviewsUrl = _websiteConfiguration.ProductReviewsAddress;
 
-            //Required parameter
-            reviewsUrl = string.Concat(reviewsUrl, requestB2WReview.Filter);
-
-            if (!string.IsNullOrEmpty(requestB2WReview.Sort))
-                reviewsUrl = string.Concat(reviewsUrl, requestB2WReview.Offset);
-
-            if (!string.IsNullOrEmpty(requestB2WReview.Sort))
-                reviewsUrl = string.Concat(reviewsUrl, requestB2WReview.Limit);
-
-            if(!string.IsNullOrEmpty(requestB2WReview.Sort))
-                reviewsUrl = string.Concat(reviewsUrl, requestB2WReview.Sort);
-
-            var reviewsResponse = await ExecuteJsonRequest(reviewsUrl);
-
-            var reviews = JsonConvert.DeserializeObject<RequestB2WReviewResultDTO>(reviewsResponse, new JsonSerializerSettings
+            try
             {
-                Culture = CultureInfo.GetCultureInfo("pt-BR")
-            });
+                //Required parameter
+                reviewsUrl = string.Concat(reviewsUrl, "?", requestB2WReview.Filter);
 
-            if (reviews != null)
-            {
-                Parallel.ForEach(reviews.Results, review =>
+                if (!string.IsNullOrEmpty(requestB2WReview.Offset))
+                    reviewsUrl = string.Concat(reviewsUrl, "&", requestB2WReview.Offset);
+
+                if (!string.IsNullOrEmpty(requestB2WReview.Sort))
+                    reviewsUrl = string.Concat(reviewsUrl, "&", requestB2WReview.Limit);
+
+                if (!string.IsNullOrEmpty(requestB2WReview.Sort))
+                    reviewsUrl = string.Concat(reviewsUrl, "&", requestB2WReview.Sort);
+
+                _logger.LogInformation($"Executing Json request on URL: {reviewsUrl}");
+
+                var reviewsResponse = await ExecuteJsonRequest(reviewsUrl);
+
+                var reviews = JsonConvert.DeserializeObject<RequestB2WReviewResultDTO>(reviewsResponse, new JsonSerializerSettings
                 {
-                    ProductReviewDTO productReview = new ProductReviewDTO();
-
-                    productReview.Reviewer = "E-Consumidor";
-
-                    productReview.Date = Convert.ToDateTime(review.SubmissionTime, CultureInfo.GetCultureInfo("pt-BR"));
-
-                    productReview.Title = review.Title;
-                    productReview.Text = review.ReviewText;
-                    productReview.IsRecommended = review.IsRecommended;
-                    productReview.Stars = review.Rating;
-
-                    reviewsToAdd.Push(productReview);
+                    Culture = CultureInfo.GetCultureInfo("pt-BR")
                 });
+
+                if (reviews != null)
+                {
+                    _logger.LogInformation($"Request returned {reviews.Results.Count()} reviews!");
+
+                    Parallel.ForEach(reviews.Results, review =>
+                    {
+                        ProductReviewDTO productReview = new ProductReviewDTO();
+
+                        productReview.Reviewer = "E-Consumidor";
+
+                        productReview.Date = Convert.ToDateTime(review.SubmissionTime, CultureInfo.GetCultureInfo("pt-BR"));
+
+                        productReview.Title = review.Title;
+                        productReview.Text = review.ReviewText;
+                        productReview.IsRecommended = review.IsRecommended;
+                        productReview.Stars = review.Rating;
+
+                        reviewsToAdd.Push(productReview);
+                    });
+
+                    _logger.LogInformation($"A total of {reviewsToAdd.Count()} was added for this product!");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error occurred while getting reviews: {ex.Message}");
             }
 
             return reviewsToAdd.ToList();
         }
-        private void ConvertHtmlToCategories(List<CategoryDTO> productCategories, List<HtmlNode> resultElements)
+        private void ConvertHtmlToCategories(ConcurrentStack<CategoryDTO> categoriesToAdd, HtmlNode categoryElement, string categoryName = null)
         {
-            ConcurrentStack<CategoryDTO> categoriesToAdd = new ConcurrentStack<CategoryDTO>();
+            CategoryDTO productCategory = new CategoryDTO();
 
-            Parallel.ForEach(resultElements, element =>
+            if (!string.IsNullOrEmpty(categoryName))
             {
-                CategoryDTO productCategory = new CategoryDTO();
-
-                var categoryElement = element.FirstChild
-                                                .CssSelect("a")
-                                                    .FirstOrDefault();
-
+                productCategory.Name = categoryName;
+                productCategory.SubType = categoryElement.InnerText.Trim();
+            }
+            else
                 productCategory.Name = categoryElement.InnerText.Trim();
 
-                _logger.LogInformation($"Got category: {productCategory.Name}!");
+            _logger.LogInformation($"Got category: {productCategory.Name}!");
 
-                productCategory.DataProvider = _dataProvider;
+            productCategory.DataProvider = _dataProvider;
 
-                productCategory.Url = string.Concat(_websiteConfiguration.BaseAdress, categoryElement.GetAttributeValue("href"));
+            productCategory.Url = string.Concat(_websiteConfiguration.BaseAdress, categoryElement.GetAttributeValue("href"));
 
-                var responseHtml = ExecuteHtmlRequest(productCategory.Url);
+            var responseHtml = ExecuteHtmlRequest(productCategory.Url);
 
-                responseHtml.Wait();
+            responseHtml.Wait();
 
-                var productCountElement = responseHtml.Result
-                                                        .CssSelect(".sidebarFooter-product-count")
-                                                            .FirstOrDefault();
+            if (responseHtml.Result.CssSelect("div[class$=main-grid]").Any())
+            {
+                var productCountElement = responseHtml.Result.CssSelect(".sidebarFooter-product-count")
+                                                                .FirstOrDefault();
 
                 if (productCountElement != null)
                 {
@@ -264,22 +305,38 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                     productCategory.NumberOfProducts = Convert.ToInt32(strProductCount);
 
                     _logger.LogInformation($"[{productCategory.Name}] The category has {strProductCount} products!");
-
-                    productCategory.IsActive = productCategory.NumberOfProducts > 0;
                 }
-                
+
                 _logger.LogInformation($"[{productCategory.Name}] Adding category to list...");
 
                 categoriesToAdd.Push(productCategory);
-            });
+            }
+            else if(responseHtml.Result.CssSelect("#collapse-categorias").Any())
+            {
+                var subCategoriesElements = responseHtml.Result.CssSelect("#collapse-categorias")
+                                                                .FirstOrDefault()
+                                                                .CssSelect("ul[class=filter-list]")
+                                                                .FirstOrDefault()
+                                                                .CssSelect("li[class=filter-list-item]")
+                                                                .Select(element => element.FirstChild)
+                                                                .ToList();
 
-            productCategories.AddRange(categoriesToAdd.ToList());
+                Parallel.ForEach(subCategoriesElements, subCategoryElement =>
+                {
+                    ConvertHtmlToCategories(categoriesToAdd, subCategoryElement, productCategory.Name);
+                });
+
+                //foreach (var subCategoryElement in subCategoriesElements )
+                //    ConvertHtmlToCategories(categoriesToAdd, subCategoryElement);
+            }
         }
         private ProductDTO ConvertHtmlToProduct(Guid categoryId, HtmlNode htmlNode)
         {
             ProductDTO product = new ProductDTO();
 
             product.CategoryId = categoryId;
+            
+            product.DataProvider = _dataProvider;
 
             var detailUrl = htmlNode.GetAttributeValue("href");
 

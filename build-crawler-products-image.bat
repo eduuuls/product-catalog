@@ -1,0 +1,1 @@
+docker build -t product-crawler-products -f crawler-products-dockerfile .

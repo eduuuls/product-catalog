@@ -34,20 +34,32 @@ namespace ProductCatalog.Domain.Commands
 
                 var existingCategory = _productsRepository.List();
 
-                //existingCategory.Wait();
+                var task = _productsRepository.GetByKey(product.CategoryId, product.ExternalId, product.DataProvider);
 
-                if (existingCategory != null)
+                task.Wait();
+
+                var existingProduct = task.Result;
+
+                if (existingProduct != null)
                 {
-                    AddError($"Producto já existente: {product.Name}");
-                    return;
-                }
+                    existingProduct.Description = product.Description;
+                    existingProduct.Name = product.Name;
+                    existingProduct.ImageUrl = product.ImageUrl;
+                    existingProduct.Url = product.Url;
+                    existingProduct.Detail = product.Detail;
 
-                product.AddDomainEvent(new ProductCreatedEvent(product.Id, product.CategoryId, product.ExternalId, product.Name, 
-                                                                    product.Description, product.Url, product.ImageUrl, product.DataProvider, 
+                    product.AddDomainEvent(new ProductUpdatedEvent(product.Id, product.CategoryId, product.ExternalId, product.Name,
+                                                                    product.Description, product.Url, product.ImageUrl, product.DataProvider,
+                                                                        product.Detail, product.Reviews));
+                }
+                else
+                {
+                    product.AddDomainEvent(new ProductCreatedEvent(product.Id, product.CategoryId, product.ExternalId, product.Name,
+                                                                    product.Description, product.Url, product.ImageUrl, product.DataProvider,
                                                                         product.Detail, product.Reviews));
 
-                _productsRepository.Add(product);
-                
+                    _productsRepository.Add(product);
+                }
             });
 
             return await Commit(_productsRepository.UnitOfWork);

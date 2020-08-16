@@ -48,6 +48,10 @@ namespace ProductCatalog.Infra.Data.Persistance.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
+                    b.Property<string>("SubType")
+                        .HasColumnType("varchar(80)")
+                        .HasMaxLength(80);
+
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasColumnType("varchar(600)")
@@ -70,24 +74,24 @@ namespace ProductCatalog.Infra.Data.Persistance.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("varchar(300)");
 
                     b.Property<string>("ExternalId")
-                        .HasColumnType("varchar(30)")
+                        .HasColumnType("varchar(50)")
                         .HasMaxLength(30);
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasColumnType("varchar(600)")
-                        .HasMaxLength(600);
+                        .HasColumnType("varchar(1000)")
+                        .HasMaxLength(1000);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("Url")
-                        .HasColumnType("varchar(600)")
-                        .HasMaxLength(600);
+                        .HasColumnType("varchar(1000)")
+                        .HasMaxLength(1000);
 
                     b.HasKey("Id");
 
@@ -113,16 +117,16 @@ namespace ProductCatalog.Infra.Data.Persistance.Migrations
                         .HasMaxLength(50);
 
                     b.Property<string>("Manufacturer")
-                        .HasColumnType("varchar(100)")
-                        .HasMaxLength(100);
+                        .HasColumnType("varchar(200)")
+                        .HasMaxLength(200);
 
                     b.Property<string>("Model")
                         .HasColumnType("varchar(100)")
                         .HasMaxLength(100);
 
                     b.Property<string>("OtherSpecs")
-                        .HasColumnType("varchar(2000)")
-                        .HasMaxLength(2000);
+                        .HasColumnType("varchar(4000)")
+                        .HasMaxLength(4000);
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uniqueidentifier");
@@ -132,8 +136,8 @@ namespace ProductCatalog.Infra.Data.Persistance.Migrations
                         .HasMaxLength(100);
 
                     b.Property<string>("Supplier")
-                        .HasColumnType("varchar(100)")
-                        .HasMaxLength(100);
+                        .HasColumnType("varchar(200)")
+                        .HasMaxLength(200);
 
                     b.HasKey("Id");
 
