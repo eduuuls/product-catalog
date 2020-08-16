@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ProductCatalog.Crawler": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
