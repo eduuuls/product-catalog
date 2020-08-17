@@ -22,6 +22,8 @@ namespace ProductCatalog.Application.MessagePublishers
                 topic = serviceBusConfig.Value.Topics.First(t => t.Key == "CategoryTopic");
             else if (typeof(T).Name == "ProductJob")
                 topic = serviceBusConfig.Value.Topics.First(t => t.Key == "ProductTopic");
+            else if (typeof(T).Name == "ProductReviewsJob")
+                topic = serviceBusConfig.Value.Topics.First(t => t.Key == "ReviewsTopic");
 
             _topicClient = new TopicClient(connectionString: serviceBusConfig.Value.ConnectionString, entityPath: topic.Name);
         }

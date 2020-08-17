@@ -18,8 +18,8 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
                     .HasMaxLength(50);
             
             builder.Property("BarCode")
-                    .HasColumnType("varchar(100)")
-                    .HasMaxLength(100);
+                    .HasColumnType("varchar(500)")
+                    .HasMaxLength(500);
             
             builder.Property("Manufacturer")
                     .HasColumnType("varchar(200)")
@@ -38,8 +38,8 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
                     .HasMaxLength(100);
             
             builder.Property("OtherSpecs")
-                    .HasColumnType("varchar(4000)")
-                    .HasMaxLength(4000);
+                    .HasColumnType("varchar(8000)")
+                        .HasMaxLength(8000);
             
             builder.Property("ProductId");
             

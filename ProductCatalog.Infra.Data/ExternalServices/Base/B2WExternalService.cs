@@ -181,7 +181,6 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 //_logger.LogInformation($"Actions performed!");
                 #endregion
 
-                _logger.LogInformation($"Number of resulted elements added: {resultElements.Count}");
                 _logger.LogInformation($"Converting resulting elements...");
 
                 Parallel.ForEach(resultHtml, element =>
@@ -427,7 +426,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                 Parallel.ForEach(techSpecs, spec => specs.TryAdd(spec.Key, spec.Value));
 
-                product.OtherSpecs = JsonConvert.SerializeObject(specs);
+                product.OtherSpecs = JsonConvert.SerializeObject(specs, Newtonsoft.Json.Formatting.None);
             });
 
             return productDetail;

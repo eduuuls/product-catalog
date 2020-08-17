@@ -20,7 +20,7 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
             
             builder.Property("ExternalId")
                     .HasColumnType("varchar(50)")
-                    .HasMaxLength(30);
+                    .HasMaxLength(50);
             
             builder.Property("Description")
                     .HasColumnType("varchar(300)");

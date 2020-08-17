@@ -9,7 +9,11 @@ namespace ProductCatalog.Domain.Commands.Validations
         public CreateNewProductCommandValidation()
         {
             ValidateName();
+            ValidateDescription();
+            ValidateExternalId();
+            ValidateImageUrl();
             ValidateUrl();
+            ValidateDetailSpecs();
         }
     }
 }

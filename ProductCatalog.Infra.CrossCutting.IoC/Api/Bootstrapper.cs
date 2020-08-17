@@ -84,7 +84,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
             services.AddScoped<IRequestHandler<UpdateCategoryCommand, ValidationResult>, CategoryCommandHandler>();
             services.AddScoped<IRequestHandler<CreateNewCategoryCommand, ValidationResult>, CategoryCommandHandler>();
             services.AddScoped<IRequestHandler<CreateNewCategoriesCommand, ValidationResult>, CategoriesCommandHandler>();
-
+            services.AddScoped<IRequestHandler<AddProductReviewsCommand, ValidationResult>, ProductReviewsCommandHandler>();
             services.AddScoped<IRequestHandler<CreateNewProductsCommand, ValidationResult>, ProductsCommandHandler>();
         }
         public static void RegisterEvents(this IServiceCollection services)

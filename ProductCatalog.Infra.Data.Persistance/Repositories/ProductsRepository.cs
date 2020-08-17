@@ -30,5 +30,10 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories
 
             return product;
         }
+
+        public async Task<Product> GetById(Guid id)
+        {
+            return await List().FirstOrDefaultAsync(c => c.Id == id);
+        }
     }
 }

@@ -9,6 +9,10 @@
     <Compile Remove="Migrations\20200809065726_AlterCategoryTable.Designer.cs" />
     <Compile Remove="Migrations\20200809070436_AlterTables.cs" />
     <Compile Remove="Migrations\20200809070436_AlterTables.Designer.cs" />
+    <Compile Remove="Migrations\20200816221254_AlterDetailsTable.cs" />
+    <Compile Remove="Migrations\20200816221254_AlterDetailsTable.Designer.cs" />
+    <Compile Remove="Migrations\20200817014656_AlterDetailsTable.cs" />
+    <Compile Remove="Migrations\20200817014656_AlterDetailsTable.Designer.cs" />
   </ItemGroup>
 
   <ItemGroup>
