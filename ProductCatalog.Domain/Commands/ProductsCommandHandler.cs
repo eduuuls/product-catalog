@@ -64,5 +64,6 @@ namespace ProductCatalog.Domain.Commands
 
             return await Commit(_productsRepository.UnitOfWork);
         }
+
     }
 }

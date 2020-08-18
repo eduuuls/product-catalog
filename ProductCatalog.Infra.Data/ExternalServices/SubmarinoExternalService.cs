@@ -13,11 +13,14 @@ namespace ProductCatalog.Infra.Data.ExternalServices
         public SubmarinoExternalService(ILogger<SubmarinoExternalService> logger,
                                             IHttpClientFactory httpClientFactory,
                                                 IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
-                                                    ChromeOptions chromeOptions) 
+                                                    IOptions<FirebaseConfiguration> firebaseConfiguration,
+                                                        ChromeOptions chromeOptions) 
             : base(httpClientFactory,
                     logger,
                         chromeOptions,
-                            externalServicesConfiguraiton, DataProvider.Americanas)
+                            externalServicesConfiguraiton, 
+                                firebaseConfiguration,
+                                    DataProvider.Americanas)
         {
         }
     }

@@ -13,11 +13,14 @@ namespace ProductCatalog.Infra.Data.ExternalServices
         public ShoptimeExternalService(ILogger<AmericanasExternalService> logger,
                                             IHttpClientFactory httpClientFactory,
                                                 IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
-                                                    ChromeOptions chromeOptions) 
+                                                    IOptions<FirebaseConfiguration> firebaseConfiguration,
+                                                        ChromeOptions chromeOptions) 
             : base(httpClientFactory,
                     logger,
                         chromeOptions,
-                            externalServicesConfiguraiton, DataProvider.Shoptime)
+                            externalServicesConfiguraiton, 
+                                firebaseConfiguration, 
+                                    DataProvider.Shoptime)
         {
         }
 

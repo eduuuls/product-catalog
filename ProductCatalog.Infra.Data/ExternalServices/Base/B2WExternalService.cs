@@ -1,28 +1,22 @@
-﻿using HtmlAgilityPack;
+﻿using Firebase.Auth;
+using Firebase.Storage;
+using HtmlAgilityPack;
+using Microsoft.EntityFrameworkCore.Update.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Interactions;
-using OpenQA.Selenium.Remote;
-using OpenQA.Selenium.Support.UI;
 using ProductCatalog.Domain.DTO;
 using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Enums;
-using ProductCatalog.Domain.Interfaces.ExternalServices.Base;
 using ProductCatalog.Infra.Data.Configuration;
 using ScrapySharp.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,11 +27,12 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         private readonly WebsiteConfiguration _websiteConfiguration;
         private readonly ChromeOptions _chromeOptions;
         private readonly DataProvider _dataProvider;
-        
+        private readonly FirebaseConfiguration _firebaseConfiguration;
         public B2WExternalService(IHttpClientFactory httpClientFactory,
                                     ILogger logger,
                                     ChromeOptions chromeOptions,
                                         IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
+                                            IOptions<FirebaseConfiguration> firebaseConfiguration,
                                             DataProvider dataProvider) : base(httpClientFactory, logger, "B2WClient")
         {
             _dataProvider = dataProvider;
@@ -45,6 +40,8 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             _websiteConfiguration = externalServicesConfiguraiton.Value?
                                             .WebsiteConfigurations?
                                                 .FirstOrDefault(w => w.Key == dataProvider.ToString());
+
+            _firebaseConfiguration = firebaseConfiguration.Value;
         }
         public async Task<List<CategoryDTO>> GetProductCategories()
         {
@@ -351,8 +348,6 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
             product.Url = $"{_websiteConfiguration.BaseAdress}{detailUrl}";
 
-            var fillProductSpecsTask = FillProductDetail(product);
-
             var endIdIndex = detailUrl.IndexOf("?");
 
             product.ExternalId = detailUrl.Substring(0, endIdIndex)
@@ -364,11 +359,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             if (name != null)
                 product.Name = name.InnerText;
 
-            //var image = htmlNode.CssSelect("img[class^=ImageUI]")
-            //                        .FirstOrDefault();
-
-            //if (image != null)
-            //    product.ImageUrl = image.GetAttributeValue("src");
+            var fillProductSpecsTask = FillProductDetail(product);
 
             fillProductSpecsTask.Wait();
 
@@ -377,13 +368,13 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         private async Task<ProductDetail> FillProductDetail(ProductDTO product)
         {
             ProductDetail productDetail = new ProductDetail();
-
+            
             var detailResponse = await ExecuteHtmlRequest(product.Url);
 
             var image = detailResponse.CssSelect("meta[property='og:image']").FirstOrDefault();
 
             if (image != null)
-                product.ImageUrl = image.GetAttributeValue("content");
+                product.ImageUrl = await UploadImageToFirebase(product.ExternalId, image.GetAttributeValue("content"));
 
             var techSpecs = detailResponse.CssSelect("table[class^=TableUI]")
                                                 .CssSelect("tr[class^=Tr]")
@@ -395,6 +386,8 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                                                             return new KeyValuePair<string, string>(key, value);
                                                         }).ToList();
+
+      
 
             //var hasUniqueConstraintInfo = techSpecs.Any(t => t.Key.ToUpper().Contains("CÓDIGO DE BARRAS")
             //                                                        || t.Key.ToUpper().Contains("MODELO"));
@@ -440,6 +433,27 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             });
 
             return productDetail;
+        }
+
+        private async Task<string> UploadImageToFirebase(string productExternalId, string imageUrl)
+        {
+            FirebaseAuthProvider firebaseAuthProvider = new FirebaseAuthProvider(new FirebaseConfig(_firebaseConfiguration.Apikey));
+            FirebaseAuthLink authLink = await firebaseAuthProvider.SignInWithEmailAndPasswordAsync(_firebaseConfiguration.AuthEmail, _firebaseConfiguration.AuthPassword);
+            FirebaseStorageOptions firebaseStorageOptions = new FirebaseStorageOptions();
+            var cancelationToken = new CancellationTokenSource();
+
+            firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(authLink.FirebaseToken);
+            firebaseStorageOptions.ThrowOnCancel = true;
+
+            var imageUploader = new FirebaseStorage(_firebaseConfiguration.StorageBucketUrl, firebaseStorageOptions);
+
+            var imageExtension = imageUrl.Split(".").Last();
+
+            var imageStream = await ExecuteImageRequest(imageUrl);
+
+            return await imageUploader.Child("images")
+                                        .Child("products")
+                                            .Child($"{productExternalId}.{imageExtension}").PutAsync(imageStream);
         }
     }
 }

@@ -19,13 +19,19 @@ namespace ProductCatalog.Application.Jobs
         private const int CATEGORY_PAGE_SIZE = 24;
         private const int MAX_PAGES = 20;
 
+        private readonly IShoptimeExternalService _shoptimeExternalService;
         private readonly IAmericanasExternalService _americanasExternalService;
+        private readonly ISubmarinoExternalService _submarinoExternalService;
         private readonly IMessagePublisher<ProductJob> _messagePublisher;
         public ProductJob(ILogger<ProductJob> logger, IMapper mapper, IMessagePublisher<ProductJob> messagePublisher,
-                                    IAmericanasExternalService americanasExternalService)
+                                    IShoptimeExternalService shoptimeExternalService, 
+                                        IAmericanasExternalService americanasExternalService,
+                                            ISubmarinoExternalService submarinoExternalService)
             : base(logger, mapper)
         {
             _americanasExternalService = americanasExternalService;
+            _shoptimeExternalService = shoptimeExternalService;
+            _submarinoExternalService = submarinoExternalService;
             _messagePublisher = messagePublisher;
         }
 
@@ -33,26 +39,6 @@ namespace ProductCatalog.Application.Jobs
         {
             LogInfo($"[ProductJobs] Starting Job...");
 
-            switch (categoryViewModel.DataProvider)
-            {
-                case DataProvider.Americanas:
-                    ImportFromAmericanas(categoryViewModel);
-                    break;
-                case DataProvider.Submarino:
-                    ImportFromAmericanas(categoryViewModel);
-                    break;
-                case DataProvider.Shoptime:
-                    ImportFromAmericanas(categoryViewModel);
-                    break;
-                case DataProvider.Buscape:
-                    break;
-            }
-
-            LogInfo($"[ProductJobs] Finishing Job...");
-        }
-
-        private void ImportFromAmericanas(CategoryViewModel categoryViewModel)
-        {
             List<ProductDTO> products = new List<ProductDTO>();
 
             int numberOfPages = categoryViewModel.NumberOfProducts / CATEGORY_PAGE_SIZE;
@@ -62,19 +48,38 @@ namespace ProductCatalog.Application.Jobs
             if (numberOfPages > MAX_PAGES)
                 numberOfPages = MAX_PAGES;
 
-            LogInfo($"[ProductJobs] ImportFromAmericanas - Getting products...");
+            LogInfo($"[ProductJobs] ImportProducts - Getting products...");
 
             Parallel.For(0, numberOfPages, (index) =>
             {
                 var url = $"{categoryViewModel.Url}/pagina-{index + 1}";
 
-                LogInfo($"[ProductJobs] ImportFromAmericanas - Getting products from category:{categoryViewModel.Name}...");
+                LogInfo($"[ProductJobs] ImportProducts - Getting products from category:{categoryViewModel.Name}...");
 
-                var americanasProducts = _americanasExternalService.GetProductsByCategory(categoryViewModel.Id, url);
-
-                products.AddRange(americanasProducts);
+                switch (categoryViewModel.DataProvider)
+                {
+                    case DataProvider.Americanas:
+                        products.AddRange(_americanasExternalService.GetProductsByCategory(categoryViewModel.Id, url));
+                        break;
+                    case DataProvider.Submarino:
+                        products.AddRange(_submarinoExternalService.GetProductsByCategory(categoryViewModel.Id, url));
+                        break;
+                    case DataProvider.Shoptime:
+                        products.AddRange(_shoptimeExternalService.GetProductsByCategory(categoryViewModel.Id, url));
+                        break;
+                    case DataProvider.Buscape:
+                        break;
+                }
             });
 
+            QueueProducts(products);
+
+            LogInfo($"[ProductJobs] ImportProducts - Products imported!");
+            LogInfo($"[ProductJobs] Job finished...");
+        }
+
+        private void QueueProducts(List<ProductDTO> products)
+        {
             var commands = products.Select(product =>
             {
                 var reviews = _mapper.Map<List<ProductReview>>(product.Reviews);
@@ -102,8 +107,6 @@ namespace ProductCatalog.Application.Jobs
                     LogError($"[Error] {ex.Message}");
                 }
             }
-
-            LogInfo($"[ProductJobs] ImportFromAmericanas - products created...");
         }
     }
 }

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using ProductCatalog.Application.Interfaces;
 using ProductCatalog.Domain.Commands;
+using ProductCatalog.Domain.DTO;
 using ProductCatalog.Domain.Enums;
 using ProductCatalog.Domain.Interfaces.ExternalServices;
 using System;
@@ -36,28 +37,30 @@ namespace ProductCatalog.Application.Jobs
             switch (dataProvider)
             {
                 case DataProvider.Americanas:
-                    await ImportFromAmericanas();
+                    LogInfo($"[ProductCategoryJobs] ImportFromAmericanas - Getting categories...");
+                    QueueCategories(await _americanasExternalService.GetProductCategories());
+                    LogInfo($"[ProductCategoryJobs] ImportFromAmericanas - Categories imported!");
                     break;
                 case DataProvider.Submarino:
-                    await ImportFromAmericanas();
+                    LogInfo($"[ProductCategoryJobs] ImportFromSubmarino - Getting categories...");
+                    QueueCategories(await _submarinoExternalService.GetProductCategories());
+                    LogInfo($"[ProductCategoryJobs] ImportFromSubmarino - Categories imported!");
                     break;
                 case DataProvider.Shoptime:
-                    await ImportFromAmericanas();
+                    LogInfo($"[ProductCategoryJobs] ImportFromShoptime - Getting categories...");
+                    QueueCategories(await _shoptimeExternalService.GetProductCategories());
+                    LogInfo($"[ProductCategoryJobs] ImportFromShoptime - Categories imported!");
                     break;
             }
 
-            LogInfo($"[ProductCategoryJobs] Finishing Job...");
+            LogInfo($"[ProductCategoryJobs] Job finished...");
         }
 
-        private async Task ImportFromAmericanas()
+        private void QueueCategories(List<CategoryDTO> categories)
         {
-            LogInfo($"[ProductCategoryJobs] ImportFromAmericanas - Getting categories...");
-            var americanasCategories = await _americanasExternalService.GetProductCategories();
-            List<Task> tasks = new List<Task>();
-            
-            var commands = americanasCategories.Select(category =>
+            var commands = categories.Select(category =>
             {
-                return new CreateNewCategoryCommand(category.Name, category.SubType, category.Description, category.Url, category.ImageUrl, 
+                return new CreateNewCategoryCommand(category.Name, category.SubType, category.Description, category.Url, category.ImageUrl,
                                                         category.IsActive, category.NumberOfProducts, category.DataProvider);
             }).ToList();
 
@@ -78,42 +81,6 @@ namespace ProductCatalog.Application.Jobs
                     LogError($"[Error] {ex.Message}");
                 }
             }
-
-            LogInfo($"[ProductCategoryJobs] ImportFromAmericanas - Categories created...");
         }
-
-        //private async Task ImportFromSubmarino()
-        //{
-        //    List<Task> tasks = new List<Task>();
-
-        //    var submarinoCategories = await _submarinoExternalService.GetProductCategories();
-
-        //    foreach (var category in submarinoCategories)
-        //    {
-        //        var task = Task.Run(async () =>
-        //        {
-        //            await SendCreationCommand(category);
-        //        });
-
-        //        tasks.Add(task);
-        //    };
-        //}
-
-        //private async Task ImportFromShoptime()
-        //{
-        //    List<Task> tasks = new List<Task>();
-
-        //    var shoptimeCategories = await _shoptimeExternalService.GetProductCategories();
-
-        //    foreach (var category in shoptimeCategories)
-        //    {
-        //        var task = Task.Run(async () =>
-        //        {
-        //            await SendCreationCommand(category);
-        //        });
-
-        //        tasks.Add(task);
-        //    };
-        //}
     }
 }

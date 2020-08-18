@@ -10,6 +10,7 @@ using Polly.Retry;
 using ProductCatalog.Domain.Interfaces.ExternalServices.Base;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -71,6 +72,16 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             document.LoadHtml(content);
 
             return document.DocumentNode;
+        }
+
+        public async Task<Stream> ExecuteImageRequest(string requestUrl)
+        {
+            var response = GetRetryPolicy().Execute(() =>
+            {
+                return _httpClient.GetAsync(requestUrl).Result;
+            });
+
+            return await response.Content.ReadAsStreamAsync();
         }
 
         public HtmlNode ExecuteWebDriverRequest(string requestUrl)

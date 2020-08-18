@@ -64,6 +64,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Crawler
         public static void RegisterConfigurations(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<ExternalServicesConfiguraiton>(opt => configuration.GetSection("ExternalServicesConfiguraiton").Bind(opt));
+            services.Configure<FirebaseConfiguration>(opt => configuration.GetSection("FirebaseConfiguration").Bind(opt));
             services.Configure<ServiceBusConfiguration>(opt => configuration.GetSection("ServiceBusConfiguration").Bind(opt));
         }
         public static void RegisterJobs(this IServiceCollection services)
