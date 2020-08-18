@@ -23,26 +23,23 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 {
     public abstract class ExternalService: IExternalService
     {
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _clientFactory;
         private readonly Random _random;
         private readonly int _minBreathTime;
         private readonly int _maxBreathTime;
         protected readonly ILogger _logger;
 
-        public ExternalService(HttpClient httpClient)
+        public ExternalService(IHttpClientFactory clientFactory)
         {
-            _httpClient = httpClient;
-
+            _clientFactory = clientFactory;
             _random = new Random();
             _minBreathTime = 15000;
             _maxBreathTime = 180000;
         }
 
-        public ExternalService(IHttpClientFactory clientFactory, ILogger logger, string serviceName)
+        public ExternalService(IHttpClientFactory clientFactory, ILogger logger)
         {
-            _httpClient = string.IsNullOrEmpty(serviceName)? 
-                                    clientFactory.CreateClient() : 
-                                        clientFactory.CreateClient(serviceName);
+            _clientFactory = clientFactory;
             _logger = logger;
             _random = new Random();
             _minBreathTime = 15000;
@@ -51,6 +48,8 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         
         public async Task<HtmlNode> ExecuteHtmlRequest(string requestUrl, bool takeBreathTime = true)
         {
+            HtmlDocument document = new HtmlDocument();
+
             if (takeBreathTime)
             {
                 var breathTime = _random.Next(_minBreathTime, _maxBreathTime);
@@ -60,28 +59,36 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 Thread.Sleep(breathTime);
             }
 
-            var response = GetRetryPolicy().Execute(() =>
+            using (var httpClient = _clientFactory.CreateClient())
             {
-                return _httpClient.GetAsync(requestUrl).Result;
-            });
+                httpClient.Timeout = TimeSpan.FromMinutes(1);
 
-            var content = await response.Content.ReadAsStringAsync();
-            
-            HtmlDocument document = new HtmlDocument();
+                var response = GetRetryPolicy().Execute(() =>
+                {
+                   return httpClient.GetAsync(requestUrl).Result;
+                });
 
-            document.LoadHtml(content);
+                var content = await response.Content.ReadAsStringAsync();
+
+                document.LoadHtml(content);
+            }
 
             return document.DocumentNode;
         }
 
         public async Task<Stream> ExecuteImageRequest(string requestUrl)
         {
-            var response = GetRetryPolicy().Execute(() =>
+            using (var httpClient = _clientFactory.CreateClient())
             {
-                return _httpClient.GetAsync(requestUrl).Result;
-            });
+                httpClient.Timeout = TimeSpan.FromMinutes(1);
 
-            return await response.Content.ReadAsStreamAsync();
+                var response = GetRetryPolicy().Execute(() =>
+                {
+                    return httpClient.GetAsync(requestUrl).Result;
+                });
+
+                return await response.Content.ReadAsStreamAsync();
+            }
         }
 
         public HtmlNode ExecuteWebDriverRequest(string requestUrl)
@@ -155,21 +162,35 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 Thread.Sleep(breathTime);
             }
 
-            var response = GetRetryPolicy().Execute(() =>
+            using (var httpClient = _clientFactory.CreateClient())
             {
-                return _httpClient.GetAsync(new Uri(requestUrl)).Result;
-            });
+                httpClient.Timeout = TimeSpan.FromMinutes(1);
 
-            return await response.Content.ReadAsStringAsync();
+                var response = GetRetryPolicy().Execute(() =>
+                {
+                    return httpClient.GetAsync(requestUrl).Result;
+                });
+
+                return await response.Content.ReadAsStringAsync();
+            }
         }
 
-        public async Task<HttpResponseMessage> ExecuteHttpRequest(Uri requestUri, string referer)
+        public HttpResponseMessage ExecuteHttpRequest(Uri requestUri, string referer)
         {
-            _httpClient.DefaultRequestHeaders.Add("Referer", referer);
-            _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36");
-            var response = await _httpClient.GetAsync(requestUri);
-            return response;
+            using (var httpClient = _clientFactory.CreateClient())
+            {
+                httpClient.Timeout = TimeSpan.FromMinutes(1);
+                httpClient.DefaultRequestHeaders.Add("Referer", referer);
+                httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36");
+
+                var response = GetRetryPolicy().Execute(() =>
+                {
+                    return httpClient.GetAsync(requestUri).Result;
+                });
+                
+                return response;
+            }
         }
 
         private RetryPolicy<HttpResponseMessage> GetRetryPolicy()
@@ -179,7 +200,9 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                               {
                                 TimeSpan.FromSeconds(5),
                                 TimeSpan.FromSeconds(15),
-                                TimeSpan.FromSeconds(30)
+                                TimeSpan.FromSeconds(30),
+                                TimeSpan.FromSeconds(45),
+                                TimeSpan.FromSeconds(60)
                               });
         }
     }

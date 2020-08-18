@@ -10,7 +10,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices
 {
     public class ShoptimeExternalService : Base.B2WExternalService, IShoptimeExternalService
     {
-        public ShoptimeExternalService(ILogger<AmericanasExternalService> logger,
+        public ShoptimeExternalService(ILogger<ShoptimeExternalService> logger,
                                             IHttpClientFactory httpClientFactory,
                                                 IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
                                                     IOptions<FirebaseConfiguration> firebaseConfiguration,

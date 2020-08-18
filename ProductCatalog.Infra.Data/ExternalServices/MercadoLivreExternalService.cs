@@ -16,7 +16,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices
     {
         private string _websiteUrl = "https://lista.mercadolivre.com.br/";
         private string _reviewsUrl = "https://www.mercadolivre.com.br/noindex/catalog/reviews/search?itemId=@id&offset=0&limit=50";
-        public MercadoLivreExternalService(HttpClient httpClient) : base(httpClient)
+        public MercadoLivreExternalService(IHttpClientFactory httpClientFactory) : base(httpClientFactory)
         {
 
         }

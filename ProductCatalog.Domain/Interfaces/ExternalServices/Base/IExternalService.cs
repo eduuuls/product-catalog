@@ -14,6 +14,6 @@ namespace ProductCatalog.Domain.Interfaces.ExternalServices.Base
         Task<string> ExecuteJsonRequest(string requestUrl, bool takeBreathTime = true);
         Task<Stream> ExecuteImageRequest(string requestUrl);
         HtmlNode ExecuteWebDriverRequest(string requestUrl);
-        Task<HttpResponseMessage> ExecuteHttpRequest(Uri requestUri, string referer);
+        HttpResponseMessage ExecuteHttpRequest(Uri requestUri, string referer);
     }
 }

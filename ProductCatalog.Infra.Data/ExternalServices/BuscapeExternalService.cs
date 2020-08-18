@@ -18,7 +18,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices
     public class BuscapeExternalService : Base.ExternalService, IBuscapeExternalService
     {
         private string _urlBase = "https://www.buscape.com.br";
-        public BuscapeExternalService(HttpClient httpClient) : base(httpClient)
+        public BuscapeExternalService(IHttpClientFactory clientFactory) : base(clientFactory)
         {
 
         }

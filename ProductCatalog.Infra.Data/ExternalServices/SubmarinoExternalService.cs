@@ -20,7 +20,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices
                         chromeOptions,
                             externalServicesConfiguraiton, 
                                 firebaseConfiguration,
-                                    DataProvider.Americanas)
+                                    DataProvider.Submarino)
         {
         }
     }

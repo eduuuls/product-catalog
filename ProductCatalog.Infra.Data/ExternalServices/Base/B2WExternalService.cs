@@ -28,12 +28,13 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         private readonly ChromeOptions _chromeOptions;
         private readonly DataProvider _dataProvider;
         private readonly FirebaseConfiguration _firebaseConfiguration;
+        private readonly FirebaseAuthLink _authLink;
         public B2WExternalService(IHttpClientFactory httpClientFactory,
                                     ILogger logger,
                                     ChromeOptions chromeOptions,
                                         IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
                                             IOptions<FirebaseConfiguration> firebaseConfiguration,
-                                            DataProvider dataProvider) : base(httpClientFactory, logger, "B2WClient")
+                                            DataProvider dataProvider) : base(httpClientFactory, logger)
         {
             _dataProvider = dataProvider;
             _chromeOptions = chromeOptions;
@@ -42,56 +43,74 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                                                 .FirstOrDefault(w => w.Key == dataProvider.ToString());
 
             _firebaseConfiguration = firebaseConfiguration.Value;
+
+            FirebaseAuthProvider firebaseAuthProvider = new FirebaseAuthProvider(new FirebaseConfig(_firebaseConfiguration.Apikey));
+
+            _authLink = firebaseAuthProvider.SignInWithEmailAndPasswordAsync(_firebaseConfiguration.AuthEmail, _firebaseConfiguration.AuthPassword).Result;
         }
         public async Task<List<CategoryDTO>> GetProductCategories()
         {
             HtmlDocument document = new HtmlDocument();
             List<HtmlNode> htmlNodes = new List<HtmlNode>();
+            ConcurrentStack<CategoryDTO> categoriesToAdd = new ConcurrentStack<CategoryDTO>();
 
             string requestUrl = string.Concat(_websiteConfiguration.BaseAdress,
                                                        "/", _websiteConfiguration.Resource2);
             _logger.LogInformation($"Acessing URL: {requestUrl}");
-            var responseHtml = await ExecuteHtmlRequest(requestUrl, false);
 
-            var resultHtml = responseHtml.CssSelect("#sitemap-pane-categoria")
-                                            .CssSelect(".sitemap-block")
-                                                .FirstOrDefault();
-
-            _logger.LogInformation($"Extracting result elements...");
-
-            resultHtml?.FirstChild
-                        .ChildNodes
-                            .ToList()
-                                .ForEach(c =>
-                                {
-                                    if (c.LastChild.Name == "ul" && c.LastChild.HasChildNodes)
-                                        htmlNodes.AddRange(c.LastChild.ChildNodes);
-                                });
-            
-            _logger.LogInformation($"Number of itens:{htmlNodes.Count}");
-            _logger.LogInformation($"Converting resulting elements...");
-            
-            ConcurrentStack<CategoryDTO> categoriesToAdd = new ConcurrentStack<CategoryDTO>();
-
-            Parallel.ForEach(htmlNodes, element =>
+            try
             {
-                var categoryElement = element.FirstChild
-                                                   .CssSelect("a")
-                                                       .FirstOrDefault();
+                var responseHtml = await ExecuteHtmlRequest(requestUrl, false);
 
-                ConvertHtmlToCategories(categoriesToAdd, categoryElement);
-            });
+                var resultHtml = responseHtml.CssSelect("#sitemap-pane-categoria")
+                                                .CssSelect(".sitemap-block")
+                                                    .FirstOrDefault();
 
-            //foreach (var element in htmlNodes)
-            //{
-            //    var categoryElement = element.FirstChild
-            //                                      .CssSelect("a")
-            //                                          .FirstOrDefault();
+                _logger.LogInformation($"Extracting result elements...");
 
-            //    ConvertHtmlToCategories(categoriesToAdd, categoryElement);
-            //}
+                resultHtml?.FirstChild
+                            .ChildNodes
+                                .ToList()
+                                    .ForEach(c =>
+                                    {
+                                        if (c.LastChild.Name == "ul" && c.LastChild.HasChildNodes)
+                                            htmlNodes.AddRange(c.LastChild.ChildNodes);
+                                    });
 
-            _logger.LogInformation($"Number of obtained categories:{categoriesToAdd.Count}");
+                _logger.LogInformation($"Number of itens:{htmlNodes.Count}");
+                _logger.LogInformation($"Converting resulting elements...");
+
+
+
+                Parallel.ForEach(htmlNodes, element =>
+                {
+                    var categoryElement = element.FirstChild
+                                                       .CssSelect("a")
+                                                           .FirstOrDefault();
+
+                    ConvertHtmlToCategories(categoriesToAdd, categoryElement);
+                });
+
+                //foreach (var element in htmlNodes)
+                //{
+                //    var categoryElement = element.FirstChild
+                //                                      .CssSelect("a")
+                //                                          .FirstOrDefault();
+
+                //    ConvertHtmlToCategories(categoriesToAdd, categoryElement);
+                //}
+
+                _logger.LogInformation($"Number of obtained categories:{categoriesToAdd.Count}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error occurred while getting categories: {ex.Message}");
+            }
+            finally
+            {
+                GC.Collect();
+            }
+
             return categoriesToAdd.ToList();
         }
         public List<ProductDTO> GetProductsByCategory(Guid categoryId, string categoryUrl)
@@ -205,6 +224,10 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 _logger.LogInformation($"Page has no items!");
                 _logger.LogError(ex, $"Error occurred while getting products: {ex.Message}");
             }
+            finally
+            {
+                GC.Collect();
+            }
 
             return products;
         }
@@ -281,59 +304,70 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         {
             CategoryDTO productCategory = new CategoryDTO();
 
-            if (!string.IsNullOrEmpty(categoryName))
+            try
             {
-                productCategory.Name = categoryName;
-                productCategory.SubType = categoryElement.InnerText.Trim();
-            }
-            else
-                productCategory.Name = categoryElement.InnerText.Trim();
-
-            _logger.LogInformation($"Got category: {productCategory.Name}!");
-
-            productCategory.DataProvider = _dataProvider;
-
-            productCategory.Url = string.Concat(_websiteConfiguration.BaseAdress, categoryElement.GetAttributeValue("href"));
-
-            var responseHtml = ExecuteHtmlRequest(productCategory.Url);
-
-            responseHtml.Wait();
-
-            if (responseHtml.Result.CssSelect("div[class$=main-grid]").Any())
-            {
-                var productCountElement = responseHtml.Result.CssSelect(".sidebarFooter-product-count")
-                                                                .FirstOrDefault();
-
-                if (productCountElement != null)
+                if (!string.IsNullOrEmpty(categoryName))
                 {
-                    var strProductCount = string.Join("", productCountElement.InnerText.Trim().ToCharArray().Where(Char.IsDigit));
-
-                    productCategory.NumberOfProducts = Convert.ToInt32(strProductCount);
-
-                    _logger.LogInformation($"[{productCategory.Name}] The category has {strProductCount} products!");
+                    productCategory.Name = categoryName;
+                    productCategory.SubType = categoryElement.InnerText.Trim();
                 }
+                else
+                    productCategory.Name = categoryElement.InnerText.Trim();
 
-                _logger.LogInformation($"[{productCategory.Name}] Adding category to list...");
+                _logger.LogInformation($"Got category: {productCategory.Name}!");
 
-                categoriesToAdd.Push(productCategory);
-            }
-            else if(responseHtml.Result.CssSelect("#collapse-categorias").Any())
-            {
-                var subCategoriesElements = responseHtml.Result.CssSelect("#collapse-categorias")
-                                                                .FirstOrDefault()
-                                                                .CssSelect("ul[class=filter-list]")
-                                                                .FirstOrDefault()
-                                                                .CssSelect("li[class=filter-list-item]")
-                                                                .Select(element => element.FirstChild)
-                                                                .ToList();
+                productCategory.DataProvider = _dataProvider;
 
-                Parallel.ForEach(subCategoriesElements, subCategoryElement =>
+                productCategory.Url = string.Concat(_websiteConfiguration.BaseAdress, categoryElement.GetAttributeValue("href"));
+
+                var responseHtml = ExecuteHtmlRequest(productCategory.Url);
+
+                responseHtml.Wait();
+
+                if (responseHtml.Result.CssSelect("div[class$=main-grid]").Any())
                 {
-                    ConvertHtmlToCategories(categoriesToAdd, subCategoryElement, productCategory.Name);
-                });
+                    var productCountElement = responseHtml.Result.CssSelect(".sidebarFooter-product-count")
+                                                                    .FirstOrDefault();
 
-                //foreach (var subCategoryElement in subCategoriesElements )
-                //    ConvertHtmlToCategories(categoriesToAdd, subCategoryElement);
+                    if (productCountElement != null)
+                    {
+                        var strProductCount = string.Join("", productCountElement.InnerText.Trim().ToCharArray().Where(Char.IsDigit));
+
+                        productCategory.NumberOfProducts = Convert.ToInt32(strProductCount);
+
+                        _logger.LogInformation($"[{productCategory.Name}] The category has {strProductCount} products!");
+                    }
+
+                    _logger.LogInformation($"[{productCategory.Name}] Adding category to list...");
+
+                    categoriesToAdd.Push(productCategory);
+                }
+                else if (responseHtml.Result.CssSelect("#collapse-categorias").Any())
+                {
+                    var subCategoriesElements = responseHtml.Result.CssSelect("#collapse-categorias")
+                                                                    .FirstOrDefault()
+                                                                    .CssSelect("ul[class=filter-list]")
+                                                                    .FirstOrDefault()
+                                                                    .CssSelect("li[class=filter-list-item]")
+                                                                    .Select(element => element.FirstChild)
+                                                                    .ToList();
+
+                    Parallel.ForEach(subCategoriesElements, subCategoryElement =>
+                    {
+                        ConvertHtmlToCategories(categoriesToAdd, subCategoryElement, productCategory.Name);
+                    });
+
+                    //foreach (var subCategoryElement in subCategoriesElements )
+                    //    ConvertHtmlToCategories(categoriesToAdd, subCategoryElement);
+                }
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while converting element to category.");
+            }
+            finally
+            {
+                GC.Collect();
             }
         }
         private ProductDTO ConvertHtmlToProduct(Guid categoryId, HtmlNode htmlNode)
@@ -374,7 +408,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             var image = detailResponse.CssSelect("meta[property='og:image']").FirstOrDefault();
 
             if (image != null)
-                product.ImageUrl = await UploadImageToFirebase(product.ExternalId, image.GetAttributeValue("content"));
+                product.ImageUrl = await UploadImageToFirebase(product, image.GetAttributeValue("content"));
 
             var techSpecs = detailResponse.CssSelect("table[class^=TableUI]")
                                                 .CssSelect("tr[class^=Tr]")
@@ -434,26 +468,24 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
             return productDetail;
         }
-
-        private async Task<string> UploadImageToFirebase(string productExternalId, string imageUrl)
+        private async Task<string> UploadImageToFirebase(ProductDTO product, string imageUrl)
         {
-            FirebaseAuthProvider firebaseAuthProvider = new FirebaseAuthProvider(new FirebaseConfig(_firebaseConfiguration.Apikey));
-            FirebaseAuthLink authLink = await firebaseAuthProvider.SignInWithEmailAndPasswordAsync(_firebaseConfiguration.AuthEmail, _firebaseConfiguration.AuthPassword);
             FirebaseStorageOptions firebaseStorageOptions = new FirebaseStorageOptions();
             var cancelationToken = new CancellationTokenSource();
 
-            firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(authLink.FirebaseToken);
+            firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(_authLink.FirebaseToken);
             firebaseStorageOptions.ThrowOnCancel = true;
 
-            var imageUploader = new FirebaseStorage(_firebaseConfiguration.StorageBucketUrl, firebaseStorageOptions);
+            var storage = new FirebaseStorage(_firebaseConfiguration.StorageBucketUrl, firebaseStorageOptions);
 
             var imageExtension = imageUrl.Split(".").Last();
 
             var imageStream = await ExecuteImageRequest(imageUrl);
 
-            return await imageUploader.Child("images")
+            return await storage.Child("images")
                                         .Child("products")
-                                            .Child($"{productExternalId}.{imageExtension}").PutAsync(imageStream);
+                                            .Child($"Category-{product.CategoryId}")
+                                                .Child($"{product.ExternalId}.{imageExtension}").PutAsync(imageStream);
         }
     }
 }
