@@ -6,6 +6,7 @@ namespace ProductCatalog.Domain.DTO
 {
     public class B2WReviewDTO
     {
+        public string Id { get; set; }
         public string ProductId { get; set; }
         public string SubmissionTime { get; set; }
         public string UserNickname { get; set; }

@@ -2,12 +2,8 @@
 using MediatR;
 using ProductCatalog.Domain.Commands.Base;
 using ProductCatalog.Domain.Entities;
-using ProductCatalog.Domain.Events;
 using ProductCatalog.Domain.Interfaces.Repositories;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,25 +11,34 @@ namespace ProductCatalog.Domain.Commands
 {
     public class ProductReviewsCommandHandler : CommandHandler, IRequestHandler<AddProductReviewsCommand, ValidationResult>
     {
-        private readonly IProductsRepository _productsRepository;
+        private readonly IProductsReviewsRepository _productsReviewsRepository;
 
-        public ProductReviewsCommandHandler(IProductsRepository productsRepository)
+        public ProductReviewsCommandHandler(IProductsReviewsRepository productsReviewsRepository)
         {
-            _productsRepository = productsRepository;
+            _productsReviewsRepository = productsReviewsRepository;
         }
 
         public async Task<ValidationResult> Handle(AddProductReviewsCommand message, CancellationToken cancellationToken)
         {
-            var product = await _productsRepository.GetById(message.ProductId);
-
-            if (product != null)
+            message.Commands.ForEach(c =>
             {
-                product.Reviews = message.Reviews;
+                if (!c.IsValid()) return;
 
-                _productsRepository.Update(product);
-            }
+                var productReview = new ProductReview(Guid.NewGuid(), c.ProductId, c.ExternalId, c.Reviewer, c.Date, 
+                                                    c.Title, c.Text, c.Stars, c.Result, c.IsRecommended);
 
-            return await Commit(_productsRepository.UnitOfWork);
+                var task = _productsReviewsRepository.GetByKey(productReview.ProductId, productReview.ExternalId);
+
+                task.Wait();
+
+                var existingReview = task.Result;
+
+                if (existingReview == null)
+                    _productsReviewsRepository.Add(productReview);
+
+            });
+
+            return await Commit(_productsReviewsRepository.UnitOfWork);
         }
     }
 }

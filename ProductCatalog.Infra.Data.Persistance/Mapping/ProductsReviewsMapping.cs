@@ -13,20 +13,24 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
             builder.HasKey("Id");
             
             builder.Property(x => x.Id).ValueGeneratedNever();
-            
+
+            builder.Property("ExternalId")
+                    .HasColumnType("varchar(50)")
+                    .HasMaxLength(50);
+
             builder.Property("Reviewer")
-                    .HasColumnType("varchar(20)")
+                    .HasColumnType("varchar(50)")
                     .HasMaxLength(20);
             
             builder.Property("Date");
             
             builder.Property("Title")
-                    .HasColumnType("varchar(100)")
-                    .HasMaxLength(100);
+                    .HasColumnType("varchar(500)")
+                    .HasMaxLength(500);
             
             builder.Property("Text")
-                    .HasColumnType("varchar(1000)")
-                    .HasMaxLength(1000);
+                    .HasColumnType("varchar(2000)")
+                    .HasMaxLength(2000);
             
             builder.Property("Stars");
             

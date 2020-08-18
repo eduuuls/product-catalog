@@ -49,13 +49,20 @@ namespace ProductCatalog.Infra.CrossCutting.Bus
             var topic = _serviceBusConfiguration.Topics.First(t => t.Key == topicKey);
             var topicClient = new TopicClient(connectionString: _serviceBusConfiguration.ConnectionString, entityPath: topic.Name);
 
-            var messageBody = JsonConvert.SerializeObject(obj);
+            try
+            {
+                var messageBody = JsonConvert.SerializeObject(obj);
 
-            var message = new Message(body: Encoding.UTF8.GetBytes(messageBody.Compress()));
+                var message = new Message(body: Encoding.UTF8.GetBytes(messageBody.Compress()));
 
-            message.UserProperties["messageType"] = messageType;
+                message.UserProperties["messageType"] = messageType;
 
-            await topicClient.SendAsync(message);
+               await topicClient.SendAsync(message);
+            }
+            finally
+            {
+                await topicClient.CloseAsync();
+            }
         }
     }
 }

@@ -1,30 +1,26 @@
 ﻿using ProductCatalog.Domain.Commands.Base;
 using ProductCatalog.Domain.Commands.Validations;
-using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Enums;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace ProductCatalog.Domain.Commands
 {
     public class AddProductReviewsCommand : Command
     {
-        public Guid ProductId { get; protected set; }
-        public List<ProductReview> Reviews { get; protected set; }
+        public List<AddProductReviewCommand> Commands { get; protected set; }
 
-        public AddProductReviewsCommand(Guid productId, List<ProductReview> reviews)
+        public AddProductReviewsCommand(List<AddProductReviewCommand> commands)
             : base(MessageDestination.DomainMessage, typeof(AddProductReviewsCommand).Name)
         {
-            ProductId = productId;
-            Reviews = reviews;
+            Commands = commands;
         }
 
         public override bool IsValid()
         {
-            Reviews.ForEach(r =>
+            Commands.ForEach(c =>
             {
-                ValidationResult = new AddProductReviewsCommandValidation().Validate(r);
+                ValidationResult = new AddProductReviewCommandValidation().Validate(c);
             });
 
             return base.IsValid();

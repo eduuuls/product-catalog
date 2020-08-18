@@ -48,9 +48,9 @@ namespace ProductCatalog.Domain.Commands
                     existingProduct.Url = product.Url;
                     existingProduct.Detail = product.Detail;
 
-                    product.AddDomainEvent(new ProductUpdatedEvent(product.Id, product.CategoryId, product.ExternalId, product.Name,
-                                                                    product.Description, product.Url, product.ImageUrl, product.DataProvider,
-                                                                        product.Detail, product.Reviews));
+                    product.AddDomainEvent(new ProductUpdatedEvent(existingProduct.Id, existingProduct.CategoryId, existingProduct.ExternalId, existingProduct.Name,
+                                                                    existingProduct.Description, existingProduct.Url, existingProduct.ImageUrl, existingProduct.DataProvider,
+                                                                        existingProduct.Detail, existingProduct.Reviews));
                 }
                 else
                 {

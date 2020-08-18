@@ -12,7 +12,6 @@ namespace ProductCatalog.Domain.Interfaces.Repositories
     public interface IProductsRepository : IRepository<Product>
     {
         IUnitOfWork UnitOfWork { get; }
-
         Task<Product> GetByKey(Guid categoryId, string externalId, DataProvider dataProvider);
         Task<Product> GetById(Guid id);
     }

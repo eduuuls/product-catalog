@@ -18,15 +18,15 @@ using ProductCatalog.Infra.CrossCutting.Extensions;
 
 namespace ProductCatalog.Application.BackgroundServices
 {
-    public class CreateProductsConsumerService : BackgroundService
+    public class AddProductReviewsConsumerService : BackgroundService
     {
         private readonly IMediatorHandler _mediatorHandler;
         private readonly ISubscriptionClient _subscriptionClient;
-        public CreateProductsConsumerService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
+        public AddProductReviewsConsumerService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
         {
             _mediatorHandler = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IMediatorHandler>();
             
-            var categoryTopic = serviceBusConfig.Value.Topics.First(t => t.Key == "ProductTopic");
+            var categoryTopic = serviceBusConfig.Value.Topics.First(t => t.Key == "ReviewsTopic");
 
             _subscriptionClient = new SubscriptionClient(connectionString: serviceBusConfig.Value.ConnectionString,
                                                 topicPath: categoryTopic.Name,
@@ -39,9 +39,9 @@ namespace ProductCatalog.Application.BackgroundServices
             {
                 var messageBody = Encoding.UTF8.GetString(message.Body).Decompress();
 
-                var createNewCategoriesCommand = JsonConvert.DeserializeObject<CreateNewProductsCommand>(messageBody);
+                var addProductReviewsCommand = JsonConvert.DeserializeObject<AddProductReviewsCommand>(messageBody);
 
-                var commandTask = _mediatorHandler.SendCommand(createNewCategoriesCommand);
+                var commandTask = _mediatorHandler.SendCommand(addProductReviewsCommand);
 
                 commandTask.Wait();
 

@@ -76,6 +76,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Crawler
         {
             services.AddScoped<IMessagePublisher<CategoryJob>, MessagePublisher<CategoryJob>>();
             services.AddScoped<IMessagePublisher<ProductJob>, MessagePublisher<ProductJob>>();
+            services.AddScoped<IMessagePublisher<ProductReviewsJob>, MessagePublisher<ProductReviewsJob>>();
         }
     }
 }

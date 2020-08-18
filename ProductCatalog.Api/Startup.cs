@@ -46,6 +46,7 @@ namespace ProductCatalogApi
             services.AddMediatR(typeof(Startup));
             services.AddHostedService<CreateCategoriesConsumerService>();
             services.AddHostedService<CreateProductsConsumerService>();
+            services.AddHostedService<AddProductReviewsConsumerService>();
 
             var logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger();
 

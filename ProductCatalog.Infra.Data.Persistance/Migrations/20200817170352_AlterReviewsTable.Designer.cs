@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProductCatalog.Infra.Data.Persistance;
 
 namespace ProductCatalog.Infra.Data.Persistance.Migrations
 {
     [DbContext(typeof(ProductsCatalogDbContext))]
-    partial class ProductsCatalogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20200817170352_AlterReviewsTable")]
+    partial class AlterReviewsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -170,7 +172,7 @@ namespace ProductCatalog.Infra.Data.Persistance.Migrations
                         .HasMaxLength(30);
 
                     b.Property<string>("Reviewer")
-                        .HasColumnType("varchar(50)")
+                        .HasColumnType("varchar(20)")
                         .HasMaxLength(20);
 
                     b.Property<short?>("Stars")
@@ -181,8 +183,8 @@ namespace ProductCatalog.Infra.Data.Persistance.Migrations
                         .HasMaxLength(2000);
 
                     b.Property<string>("Title")
-                        .HasColumnType("varchar(500)")
-                        .HasMaxLength(500);
+                        .HasColumnType("varchar(100)")
+                        .HasMaxLength(100);
 
                     b.HasKey("Id");
 

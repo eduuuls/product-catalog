@@ -3,11 +3,11 @@ using ProductCatalog.Domain.Entities;
 
 namespace ProductCatalog.Application.AutoMapper
 {
-    public class DomainToDtoMapping : Profile
+    public class DtoToDomainMapping : Profile
     {
-        public DomainToDtoMapping()
+        public DtoToDomainMapping()
         {
-            CreateMap<ProductReview, ProductReviewDTO>();
+            CreateMap<ProductReviewDTO, ProductReview>();
         }
     }
 }

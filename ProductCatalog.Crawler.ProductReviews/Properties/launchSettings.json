@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "ProductCatalog.Crawler": {
+    "ProductCatalog.Crawler.ProductReviews": {
       "commandName": "Project"
     },
     "Docker": {

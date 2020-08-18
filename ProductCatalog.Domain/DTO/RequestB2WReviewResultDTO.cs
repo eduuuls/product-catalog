@@ -8,5 +8,7 @@ namespace ProductCatalog.Domain.DTO
     {
         public int TotalResults { get; set; }
         public List<B2WReviewDTO> Results { get; set; }
+
+        public bool Error { get; set; }
     }
 }

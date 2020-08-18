@@ -1,10 +1,8 @@
-﻿using MediatR;
-using ProductCatalog.Domain.Entities;
+﻿using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Enums;
 using ProductCatalog.Domain.Events.Base;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace ProductCatalog.Domain.Events
 {

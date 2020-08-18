@@ -7,6 +7,7 @@ namespace ProductCatalog.Domain.Entities
 {
     public class ProductReviewDTO
     {
+        public string ExternalId { get; set; }
         public string Reviewer { get; set; }
         public DateTime? Date { get; set; }
         public string Title { get; set; }

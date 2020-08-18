@@ -8,7 +8,27 @@ namespace ProductCatalog.Domain.Entities
 {
     public class ProductReview: Entity
     {
+        public ProductReview()
+        {
+
+        }
+        public ProductReview(Guid id, Guid productId, string externalId, string reviewer, DateTime? date,
+                                    string title, string text, short? stars, string result, bool? isRecommended)
+        {
+            Id = id;
+            ProductId = productId;
+            ExternalId = externalId;
+            Reviewer = reviewer;
+            Date = date;
+            Title = title;
+            Text = text;
+            Stars = stars;
+            Result = result;
+            IsRecommended = isRecommended;
+        }
+
         public Guid ProductId { get; set; }
+        public string ExternalId { get; set; }
         public string Reviewer { get; set; }
         public DateTime? Date { get; set; }
         public string Title { get; set; }

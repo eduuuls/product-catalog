@@ -10,8 +10,10 @@ WORKDIR /src
 COPY *.sln ./
 COPY ["ProductCatalog.Api/ProductCatalog.Api.csproj", "ProductCatalog.Api/"]
 COPY ["ProductCatalog.Infra.CrossCutting.IoC/ProductCatalog.Infra.CrossCutting.IoC.csproj", "ProductCatalog.Infra.CrossCutting.IoC/"]
+COPY ["ProductCatalog.Infra.CrossCutting/ProductCatalog.Infra.CrossCutting.csproj", "ProductCatalog.Infra.CrossCutting/"]
 COPY ["ProductCatalog.Domain/ProductCatalog.Domain.csproj", "ProductCatalog.Domain/"]
 COPY ["ProductCatalog.Infra.Data/ProductCatalog.Infra.Data.csproj", "ProductCatalog.Infra.Data/"]
+COPY ["ProductCatalog.Infra.CrossCutting.Bus/ProductCatalog.Infra.CrossCutting.Bus.csproj", "ProductCatalog.Infra.CrossCutting.Bus/"]
 COPY ["ProductCatalog.Infra.Data.Persistance/ProductCatalog.Infra.Data.Persistance.csproj", "ProductCatalog.Infra.Data.Persistance/"]
 COPY ["ProductCatalog.Application/ProductCatalog.Application.csproj", "ProductCatalog.Application/"]
 RUN dotnet restore "ProductCatalog.Api/ProductCatalog.Api.csproj"

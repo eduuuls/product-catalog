@@ -18,10 +18,11 @@ namespace ProductCatalog.Application.Jobs
     {
         private const int CATEGORY_PAGE_SIZE = 24;
         private const int MAX_PAGES = 20;
+        private const int MAX_REVIEWS = 300;
 
         private readonly IAmericanasExternalService _americanasExternalService;
-        private readonly IMessagePublisher<ProductJob> _messagePublisher;
-        public ProductReviewsJob(ILogger<ProductJob> logger, IMapper mapper, IMessagePublisher<ProductJob> messagePublisher,
+        private readonly IMessagePublisher<ProductReviewsJob> _messagePublisher;
+        public ProductReviewsJob(ILogger<ProductReviewsJob> logger, IMapper mapper, IMessagePublisher<ProductReviewsJob> messagePublisher,
                                     IAmericanasExternalService americanasExternalService)
             : base(logger, mapper)
         {
@@ -56,7 +57,7 @@ namespace ProductCatalog.Application.Jobs
             LogInfo($"[ProductReviewsJob] ImportFromAmericanas - Getting reviews...");
 
             List<ProductReview> reviews = new List<ProductReview>();
-            bool hasReviews = true;
+            bool goNext = true;
             int offset = 0;
 
             //?&offset=0&limit=50&sort=SubmissionTime:asc&filter=ProductId:@id
@@ -65,7 +66,7 @@ namespace ProductCatalog.Application.Jobs
             requestB2WReviewDTO.Limit = "limit=50";
             requestB2WReviewDTO.Sort = "sort=SubmissionTime:asc";
 
-            while(hasReviews)
+            while(goNext)
             {
                 LogInfo($"[ProductReviewsJob] ImportFromAmericanas - Getting reviews for product:{productViewModel.Name}...");
                 
@@ -76,22 +77,33 @@ namespace ProductCatalog.Application.Jobs
                 productReviewTask.Wait();
 
                 if (productReviewTask.Result != null)
+                {
                     reviews.AddRange(_mapper.Map<List<ProductReview>>(productReviewTask.Result));
-                else
-                    hasReviews = false;
 
-                offset++;
+                    goNext = productReviewTask.Result.Count == 50;
+                }
+                else
+                    goNext = false;
+
+                offset += 50;
+
+                if(reviews.Count >= MAX_REVIEWS)
+                    goNext = false;
             }
 
-            if (reviews.Any())
+            var commands = reviews.Select(review =>
             {
-                AddProductReviewsCommand addProductReviewsCommand = new AddProductReviewsCommand(productViewModel.Id, reviews);
+                return new AddProductReviewCommand(productViewModel.Id, review.ExternalId, review.Reviewer, review.Date, review.Title,
+                                                        review.Text, review.Stars, review.Result, review.IsRecommended);
+            }).ToList();
 
+            if (commands.Any())
+            {
                 try
                 {
-                    LogInfo($"[ProductReviewsJob] Queueing product reviews...");
+                    LogInfo($"[ProductCategoryJobs] Queueing product reviews: {commands.Count}");
 
-                    var queueTask = _messagePublisher.Publish(addProductReviewsCommand);
+                    var queueTask = _messagePublisher.Publish(new AddProductReviewsCommand(commands));
 
                     queueTask.Wait();
 

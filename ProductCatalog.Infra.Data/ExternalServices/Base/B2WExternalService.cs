@@ -240,7 +240,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                     Culture = CultureInfo.GetCultureInfo("pt-BR")
                 });
 
-                if (reviews != null)
+                if (reviews != null && !reviews.Error)
                 {
                     _logger.LogInformation($"Request returned {reviews.Results.Count()} reviews!");
 
@@ -252,10 +252,20 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                         productReview.Date = Convert.ToDateTime(review.SubmissionTime, CultureInfo.GetCultureInfo("pt-BR"));
 
+                        productReview.ExternalId = review.Id;
                         productReview.Title = review.Title;
                         productReview.Text = review.ReviewText;
-                        productReview.IsRecommended = review.IsRecommended;
                         productReview.Stars = review.Rating;
+
+                        if(review.IsRecommended.HasValue)
+                            productReview.IsRecommended = review.IsRecommended;
+                        else if (productReview.Stars.HasValue)
+                        {
+                            if (productReview.Stars >= 3)
+                                productReview.IsRecommended = true;
+                            else
+                                productReview.IsRecommended = false;
+                        }
 
                         reviewsToAdd.Push(productReview);
                     });
