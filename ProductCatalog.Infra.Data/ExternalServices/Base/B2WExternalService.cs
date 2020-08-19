@@ -210,7 +210,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 if (!string.IsNullOrEmpty(requestB2WReview.Sort))
                     reviewsUrl = string.Concat(reviewsUrl, "&", requestB2WReview.Sort);
 
-                _logger.LogInformation($"[GetProductReviews] Executing Json request on URL...");
+                _logger.LogInformation($"[GetProductReviews][{requestB2WReview.Filter}] Executing Json request on URL: {reviewsUrl}");
 
                 var reviewsResponse = await ExecuteJsonRequest(reviewsUrl);
 
@@ -221,7 +221,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                 if (reviews != null && !reviews.Error)
                 {
-                    _logger.LogInformation($"[GetProductReviews] Request returned {reviews.Results.Count()} reviews!");
+                    _logger.LogInformation($"[GetProductReviews][{requestB2WReview.Filter}] Request returned {reviews.Results.Count()} reviews!");
 
                     Parallel.ForEach(reviews.Results, review =>
                     {
@@ -249,12 +249,12 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                         reviewsToAdd.Push(productReview);
                     });
 
-                    _logger.LogInformation($"[GetProductReviews] A total of {reviewsToAdd.Count()} was added for this product!");
+                    _logger.LogInformation($"[GetProductReviews][{requestB2WReview.Filter}] A total of {reviewsToAdd.Count()} was added for this product!");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[GetProductReviews] Error occurred while getting reviews: {ex.Message}");
+                _logger.LogError(ex, $"[GetProductReviews][{requestB2WReview.Filter}] Error occurred while getting reviews: {ex.Message}");
             }
 
             return reviewsToAdd.ToList();
