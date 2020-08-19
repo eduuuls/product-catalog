@@ -34,7 +34,7 @@ namespace ProductCatalogApi
             services.AddScoped<IMediatorHandler, MessageBus>();
 
             services.RegisterConfigurations(Configuration);
-            services.RegisterExternalServices(Configuration);
+            services.RegisterExternalServices();
             services.RegisterServices();
             services.RegisterRepositories();
             services.RegisterCommands();
@@ -77,8 +77,6 @@ namespace ProductCatalogApi
                 c.AllowAnyHeader();
                 c.AllowAnyMethod();
             });
-
-            app.UseHttpsRedirection();
 
             app.UseRouting();
             

@@ -12,7 +12,10 @@ using System.Threading.Tasks;
 
 namespace ProductCatalog.Domain.Commands
 {
-    public class CategoriesCommandHandler : CommandHandler, IRequestHandler<CreateNewCategoriesCommand, ValidationResult>
+    public class CategoriesCommandHandler : CommandHandler, 
+                                                IRequestHandler<CreateNewCategoriesCommand, ValidationResult>,
+                                                IRequestHandler<CreateNewCategoryCommand, ValidationResult>,
+                                                IRequestHandler<UpdateCategoryCommand, ValidationResult>
     {
         private readonly ICategoriesRepository _categoriesRepository;
 
@@ -53,6 +56,54 @@ namespace ProductCatalog.Domain.Commands
                     _categoriesRepository.Add(category);
                 }
             });
+
+            return await Commit(_categoriesRepository.UnitOfWork);
+        }
+        public async Task<ValidationResult> Handle(CreateNewCategoryCommand message, CancellationToken cancellationToken)
+        {
+            if (!message.IsValid()) return message.ValidationResult;
+
+            var category = new Category(Guid.NewGuid(), message.Name, message.SubType, message.Description, message.Url,
+                                            message.ImageUrl, message.IsActive, message.NumberOfProducts, message.DataProvider);
+
+            var task = _categoriesRepository.GetByKey(category.Name, category.DataProvider);
+
+            task.Wait();
+
+            var existingCategory = task.Result;
+
+            if (existingCategory != null)
+            {
+                existingCategory.Description = category.Description;
+                existingCategory.NumberOfProducts = category.NumberOfProducts;
+                existingCategory.ImageUrl = category.ImageUrl;
+                existingCategory.Url = category.Url;
+
+                category.AddDomainEvent(new CategoryUpdatedEvent(category.Id, category.Name, category.SubType, category.Description, category.Url,
+                                                                category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
+            }
+            else
+            {
+                category.AddDomainEvent(new CategoryCreatedEvent(category.Id, category.Name, category.SubType, category.Description, category.Url,
+                                                                category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
+
+                _categoriesRepository.Add(category);
+            }
+
+            return await Commit(_categoriesRepository.UnitOfWork);
+        }
+        public async Task<ValidationResult> Handle(UpdateCategoryCommand message, CancellationToken cancellationToken)
+        {
+            if (!message.IsValid()) return message.ValidationResult;
+
+            var category = await _categoriesRepository.GetById(message.Id);
+
+            category.IsActive = message.IsActive;
+
+            category.AddDomainEvent(new CategoryUpdatedEvent(category.Id, category.Name, category.SubType, category.Description,
+                                            category.Url, category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
+
+            _categoriesRepository.Update(category);
 
             return await Commit(_categoriesRepository.UnitOfWork);
         }

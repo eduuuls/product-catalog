@@ -15,6 +15,7 @@ using ProductCatalog.Domain.Interfaces.UoW;
 using ProductCatalog.Infra.CrossCutting.Bus;
 using ProductCatalog.Infra.Data.Configuration;
 using ProductCatalog.Infra.Data.ExternalServices;
+using ProductCatalog.Infra.Data.ExternalServices.Base;
 using ProductCatalog.Infra.Data.Persistance;
 using ProductCatalog.Infra.Data.Persistance.Repositories;
 using ProductCatalog.Infra.Data.Persistance.UoW;
@@ -29,7 +30,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
             services.Configure<ExternalServicesConfiguraiton>(opt => configuration.GetSection("ExternalServicesConfiguraiton").Bind(opt));
             services.Configure<ServiceBusConfiguration>(opt => configuration.GetSection("ServiceBusConfiguration").Bind(opt));
         }
-        public static void RegisterExternalServices(this IServiceCollection services, IConfiguration configuration)
+        public static void RegisterExternalServices(this IServiceCollection services)
         {
             services.AddScoped<ISubmarinoExternalService, SubmarinoExternalService>();
             services.AddScoped<IAmericanasExternalService, AmericanasExternalService>();
@@ -81,11 +82,12 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
         }
         public static void RegisterCommands(this IServiceCollection services)
         {
-            services.AddScoped<IRequestHandler<UpdateCategoryCommand, ValidationResult>, CategoryCommandHandler>();
-            services.AddScoped<IRequestHandler<CreateNewCategoryCommand, ValidationResult>, CategoryCommandHandler>();
+            services.AddScoped<IRequestHandler<UpdateCategoryCommand, ValidationResult>, CategoriesCommandHandler>();
+            services.AddScoped<IRequestHandler<CreateNewCategoryCommand, ValidationResult>, CategoriesCommandHandler>();
             services.AddScoped<IRequestHandler<CreateNewCategoriesCommand, ValidationResult>, CategoriesCommandHandler>();
             services.AddScoped<IRequestHandler<AddProductReviewsCommand, ValidationResult>, ProductReviewsCommandHandler>();
             services.AddScoped<IRequestHandler<CreateNewProductsCommand, ValidationResult>, ProductsCommandHandler>();
+            services.AddScoped<IRequestHandler<CreateNewProductCommand, ValidationResult>, ProductsCommandHandler>();
         }
         public static void RegisterEvents(this IServiceCollection services)
         {

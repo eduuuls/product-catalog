@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
@@ -26,6 +27,7 @@ namespace ProductCatalog.Application.MessagePublishers
                 topic = serviceBusConfig.Value.Topics.First(t => t.Key == "ReviewsTopic");
 
             _topicClient = new TopicClient(connectionString: serviceBusConfig.Value.ConnectionString, entityPath: topic.Name);
+            _topicClient.OperationTimeout = TimeSpan.FromSeconds(60);
         }
         public Task Publish<U>(U obj)
         {

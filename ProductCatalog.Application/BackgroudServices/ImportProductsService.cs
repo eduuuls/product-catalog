@@ -54,14 +54,16 @@ namespace ProductCatalog.Application.BackgroundServices
 
                     var categoryViewModel = _mapper.Map<CategoryViewModel>(categoryUpdatedEvent);
 
-                    _productJob.ImportProducts(categoryViewModel);
+                   var task = _productJob.ImportProducts(categoryViewModel);
+                    
+                    task.Wait();
                 }
 
                 return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {
-                MaxAutoRenewDuration = TimeSpan.FromMinutes(20),
+                MaxAutoRenewDuration = TimeSpan.FromMinutes(60),
                 AutoComplete = false,
                 MaxConcurrentCalls = 1
             }) ;

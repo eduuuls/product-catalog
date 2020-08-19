@@ -1,9 +1,7 @@
 ﻿using HtmlAgilityPack;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ProductCatalog.Domain.Interfaces.ExternalServices.Base
@@ -14,6 +12,6 @@ namespace ProductCatalog.Domain.Interfaces.ExternalServices.Base
         Task<string> ExecuteJsonRequest(string requestUrl, bool takeBreathTime = true);
         Task<Stream> ExecuteImageRequest(string requestUrl);
         HtmlNode ExecuteWebDriverRequest(string requestUrl);
-        HttpResponseMessage ExecuteHttpRequest(Uri requestUri, string referer);
+        Task<HttpResponseMessage> ExecuteHttpRequest(Uri requestUri, string referer);
     }
 }

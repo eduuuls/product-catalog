@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using ProductCatalog.Application.Interfaces;
 using ProductCatalog.Application.Jobs;
 using ProductCatalog.Application.MessagePublishers;
+using ProductCatalog.Infra.Data.ExternalServices.Base;
 
 namespace ProductCatalog.Infra.CrossCutting.IoC.Crawler
 {

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ProductCatalog.Application.Interfaces;
 using ProductCatalog.Application.ViewModels;
+using System.Runtime.CompilerServices;
 
 namespace ProductCatalog.Application.Jobs
 {
@@ -35,11 +36,10 @@ namespace ProductCatalog.Application.Jobs
             _messagePublisher = messagePublisher;
         }
 
-        public void ImportProducts(CategoryViewModel categoryViewModel)
+        public async Task ImportProducts(CategoryViewModel categoryViewModel)
         {
             LogInfo($"[ProductJobs] Starting Job...");
-
-            List<ProductDTO> products = new List<ProductDTO>();
+            var opts = new ParallelOptions() { MaxDegreeOfParallelism = 20 };
 
             int numberOfPages = categoryViewModel.NumberOfProducts / CATEGORY_PAGE_SIZE;
 
@@ -50,7 +50,7 @@ namespace ProductCatalog.Application.Jobs
 
             LogInfo($"[ProductJobs] ImportProducts - Getting products...");
 
-            Parallel.For(0, numberOfPages, (index) =>
+            for (int index = 0; index <= numberOfPages; index++)
             {
                 var url = $"{categoryViewModel.Url}/pagina-{index + 1}";
 
@@ -59,53 +59,74 @@ namespace ProductCatalog.Application.Jobs
                 switch (categoryViewModel.DataProvider)
                 {
                     case DataProvider.Americanas:
-                        products.AddRange(_americanasExternalService.GetProductsByCategory(categoryViewModel.Id, url));
+
+                        var americanasProducts = await _americanasExternalService.GetProductsData(categoryViewModel.Id, url);
+
+                        Parallel.ForEach(americanasProducts, opts, async productDTO =>
+                        {
+                            var product = await _americanasExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+
+                            await QueueProducts(product);
+                        });
+
+                        LogInfo($"[ProductJobs] Americanas - Number of obtained products:{americanasProducts.Count()}");
+
                         break;
                     case DataProvider.Submarino:
-                        products.AddRange(_submarinoExternalService.GetProductsByCategory(categoryViewModel.Id, url));
+
+                        var submarinoProducts = await _submarinoExternalService.GetProductsData(categoryViewModel.Id, url);
+
+                        Parallel.ForEach(submarinoProducts, opts, async productDTO =>
+                        {
+                            var product = await _submarinoExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+
+                            await QueueProducts(product);
+                        });
+
+                        LogInfo($"[ProductJobs] Submarino - Number of obtained products:{submarinoProducts.Count()}");
                         break;
                     case DataProvider.Shoptime:
-                        products.AddRange(_shoptimeExternalService.GetProductsByCategory(categoryViewModel.Id, url));
+                        var shoptimeProducts = await _shoptimeExternalService.GetProductsData(categoryViewModel.Id, url);
+
+                        Parallel.ForEach(shoptimeProducts, opts, async productDTO =>
+                        {
+                            var product = await _shoptimeExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+
+                            await QueueProducts(product);
+                        });
+
+                        LogInfo($"[ProductJobs] Shoptime - Number of obtained products:{shoptimeProducts.Count()}");
                         break;
                     case DataProvider.Buscape:
                         break;
                 }
-            });
-
-            QueueProducts(products);
+            }
 
             LogInfo($"[ProductJobs] ImportProducts - Products imported!");
+            
             LogInfo($"[ProductJobs] Job finished...");
         }
 
-        private void QueueProducts(List<ProductDTO> products)
+        private async Task QueueProducts(ProductDTO product)
         {
-            var commands = products.Select(product =>
+            var reviews = _mapper.Map<List<ProductReview>>(product.Reviews);
+
+            var command = new CreateNewProductCommand(product.CategoryId, product.ExternalId, product.Name, product.Description,
+                                                 product.BarCode, product.Code, product.Brand, product.Manufacturer, product.Model,
+                                                     product.ReferenceModel, product.Supplier, product.OtherSpecs, product.Url,
+                                                         product.ImageUrl, product.DataProvider, reviews);
+            
+            try
             {
-                var reviews = _mapper.Map<List<ProductReview>>(product.Reviews);
+                LogInfo($"[QueueProducts] Queueing product: {command.Name}");
 
-                return new CreateNewProductCommand(product.CategoryId, product.ExternalId, product.Name, product.Description,
-                                                    product.BarCode, product.Code, product.Brand, product.Manufacturer, product.Model,
-                                                        product.ReferenceModel, product.Supplier, product.OtherSpecs, product.Url,
-                                                            product.ImageUrl, product.DataProvider, reviews);
-            }).ToList();
+                await _messagePublisher.Publish(command);
 
-            if (commands.Any())
+                LogInfo($"[QueueProducts] {command.Name} queued!");
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    LogInfo($"[ProductJobs] Queueing products: {commands.Count}");
-
-                    var queueTask = _messagePublisher.Publish(new CreateNewProductsCommand(commands));
-
-                    queueTask.Wait();
-
-                    LogInfo($"[ProductJobs] {commands.Count} products queued!");
-                }
-                catch (Exception ex)
-                {
-                    LogError($"[Error] {ex.Message}");
-                }
+                LogError($"[QueueProducts] Error - {ex.Message}");
             }
         }
     }

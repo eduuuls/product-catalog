@@ -39,9 +39,9 @@ namespace ProductCatalog.Application.BackgroundServices
             {
                 var messageBody = Encoding.UTF8.GetString(message.Body).Decompress();
 
-                var createNewCategoriesCommand = JsonConvert.DeserializeObject<CreateNewCategoriesCommand>(messageBody);
+                var createNewCategoryCommand = JsonConvert.DeserializeObject<CreateNewCategoryCommand>(messageBody);
 
-                var commandTask = _mediatorHandler.SendCommand(createNewCategoriesCommand);
+                var commandTask = _mediatorHandler.SendCommand(createNewCategoryCommand);
 
                 commandTask.Wait();
 

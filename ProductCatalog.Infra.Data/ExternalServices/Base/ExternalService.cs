@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Interactions;
-using OpenQA.Selenium.Remote;
 using OpenQA.Selenium.Support.UI;
 using Polly;
 using Polly.Retry;
@@ -14,8 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,72 +20,63 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 {
     public abstract class ExternalService: IExternalService
     {
-        private readonly IHttpClientFactory _clientFactory;
+        private readonly HttpClient _httpClient;
         private readonly Random _random;
-        private readonly int _minBreathTime;
-        private readonly int _maxBreathTime;
         protected readonly ILogger _logger;
 
         public ExternalService(IHttpClientFactory clientFactory)
         {
-            _clientFactory = clientFactory;
+            _httpClient = clientFactory.CreateClient();
+            _httpClient.Timeout = TimeSpan.FromMinutes(3);
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36 Edg/84.0.522.40");
             _random = new Random();
-            _minBreathTime = 15000;
-            _maxBreathTime = 180000;
         }
 
         public ExternalService(IHttpClientFactory clientFactory, ILogger logger)
         {
-            _clientFactory = clientFactory;
+            _httpClient = clientFactory.CreateClient();
+            _httpClient.Timeout = TimeSpan.FromMinutes(3);
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36 Edg/84.0.522.40");
             _logger = logger;
             _random = new Random();
-            _minBreathTime = 15000;
-            _maxBreathTime = 180000;
         }
-        
+
         public async Task<HtmlNode> ExecuteHtmlRequest(string requestUrl, bool takeBreathTime = true)
         {
             HtmlDocument document = new HtmlDocument();
 
             if (takeBreathTime)
             {
-                var breathTime = _random.Next(_minBreathTime, _maxBreathTime);
+                var breathTime = GenerateBeathTime();
 
                 _logger.LogInformation($"[ExecuteHtmlRequest] BreathTime: {breathTime} Milliseconds");
 
                 Thread.Sleep(breathTime);
             }
 
-            using (var httpClient = _clientFactory.CreateClient())
+            var response = await GetRetryPolicy().ExecuteAsync(() =>
             {
-                httpClient.Timeout = TimeSpan.FromMinutes(1);
+                return _httpClient.GetAsync(requestUrl);
+            });
 
-                var response = GetRetryPolicy().Execute(() =>
-                {
-                   return httpClient.GetAsync(requestUrl).Result;
-                });
+            var content = await response.Content.ReadAsStringAsync();
 
-                var content = await response.Content.ReadAsStringAsync();
-
-                document.LoadHtml(content);
-            }
+            document.LoadHtml(content);
 
             return document.DocumentNode;
         }
 
         public async Task<Stream> ExecuteImageRequest(string requestUrl)
         {
-            using (var httpClient = _clientFactory.CreateClient())
+            var response = await GetRetryPolicy().ExecuteAsync(() =>
             {
-                httpClient.Timeout = TimeSpan.FromMinutes(1);
+                return _httpClient.GetAsync(requestUrl);
+            });
 
-                var response = GetRetryPolicy().Execute(() =>
-                {
-                    return httpClient.GetAsync(requestUrl).Result;
-                });
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return null;
 
-                return await response.Content.ReadAsStreamAsync();
-            }
+            return await response.Content.ReadAsStreamAsync();
         }
 
         public HtmlNode ExecuteWebDriverRequest(string requestUrl)
@@ -155,48 +143,39 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         {
             if (takeBreathTime)
             {
-                var breathTime = _random.Next(_minBreathTime, _maxBreathTime);
+                var breathTime = GenerateBeathTime();
 
                 _logger.LogInformation($"[ExecuteHtmlRequest] BreathTime: {breathTime} Milliseconds");
 
                 Thread.Sleep(breathTime);
             }
 
-            using (var httpClient = _clientFactory.CreateClient())
+            var response = await GetRetryPolicy().ExecuteAsync(() =>
             {
-                httpClient.Timeout = TimeSpan.FromMinutes(1);
+                return _httpClient.GetAsync(requestUrl);
+            });
 
-                var response = GetRetryPolicy().Execute(() =>
-                {
-                    return httpClient.GetAsync(requestUrl).Result;
-                });
-
-                return await response.Content.ReadAsStringAsync();
-            }
+            return await response.Content.ReadAsStringAsync();
         }
 
-        public HttpResponseMessage ExecuteHttpRequest(Uri requestUri, string referer)
+        public async Task<HttpResponseMessage> ExecuteHttpRequest(Uri requestUri, string referer)
         {
-            using (var httpClient = _clientFactory.CreateClient())
-            {
-                httpClient.Timeout = TimeSpan.FromMinutes(1);
-                httpClient.DefaultRequestHeaders.Add("Referer", referer);
-                httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
-                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36");
+            _httpClient.DefaultRequestHeaders.Add("Referer", referer);
+            _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36");
 
-                var response = GetRetryPolicy().Execute(() =>
-                {
-                    return httpClient.GetAsync(requestUri).Result;
-                });
-                
-                return response;
-            }
+            var response = await GetRetryPolicy().ExecuteAsync(() =>
+            {
+                return _httpClient.GetAsync(requestUri);
+            });
+
+            return response;
         }
 
-        private RetryPolicy<HttpResponseMessage> GetRetryPolicy()
+        private AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy()
         {
             return Policy.HandleResult<HttpResponseMessage>(message => message.StatusCode != HttpStatusCode.OK)
-                            .WaitAndRetry(new[]
+                            .WaitAndRetryAsync(new[]
                               {
                                 TimeSpan.FromSeconds(5),
                                 TimeSpan.FromSeconds(15),
@@ -204,6 +183,13 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                                 TimeSpan.FromSeconds(45),
                                 TimeSpan.FromSeconds(60)
                               });
+        }
+        private int GenerateBeathTime()
+        {
+            var minValue = _random.Next(1000, 30000);
+            var maxValue = _random.Next(31000, 60000);
+
+            return _random.Next(minValue, maxValue);
         }
     }
 }

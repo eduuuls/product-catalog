@@ -1,9 +1,10 @@
 ﻿using ProductCatalog.Application.ViewModels;
+using System.Threading.Tasks;
 
 namespace ProductCatalog.Application.Interfaces
 {
     public interface IProductJob
     {
-        void ImportProducts(CategoryViewModel categoryViewModel);
+        Task ImportProducts(CategoryViewModel categoryViewModel);
     }
 }

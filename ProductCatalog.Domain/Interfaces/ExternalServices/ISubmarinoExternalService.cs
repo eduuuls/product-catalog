@@ -1,16 +1,14 @@
-﻿using ProductCatalog.Domain.DTO;
+﻿using HtmlAgilityPack;
+using ProductCatalog.Domain.DTO;
 using ProductCatalog.Domain.Entities;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ProductCatalog.Domain.Interfaces.ExternalServices
 {
-    public interface ISubmarinoExternalService
+    public interface ISubmarinoExternalService: IB2WExternalService
     {
-        Task<List<CategoryDTO>> GetProductCategories();
-        List<ProductDTO> GetProductsByCategory(Guid categoryId, string categoryUrl);
-        Task<List<ProductReviewDTO>> GetProductReviews(RequestB2WReviewDTO requestB2WReview);
+       
     }
 }

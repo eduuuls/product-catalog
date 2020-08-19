@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
+using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using ProductCatalog.Application.Interfaces;
 using ProductCatalog.Domain.Commands;
 using ProductCatalog.Domain.DTO;
 using ProductCatalog.Domain.Enums;
 using ProductCatalog.Domain.Interfaces.ExternalServices;
+using ScrapySharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,31 +34,56 @@ namespace ProductCatalog.Application.Jobs
 
         public async Task ImportCategories(DataProvider dataProvider)
         {
-            LogInfo($"[ProductCategoryJobs] Starting Job...");
+            LogInfo($"[CategoryJobs] Starting Job...");
+            LogInfo($"[CategoryJobs] {dataProvider} - Getting categories...");
+            var opts = new ParallelOptions() { MaxDegreeOfParallelism = 20 };
 
             switch (dataProvider)
             {
                 case DataProvider.Americanas:
-                    LogInfo($"[ProductCategoryJobs] ImportFromAmericanas - Getting categories...");
-                    QueueCategories(await _americanasExternalService.GetProductCategories());
-                    LogInfo($"[ProductCategoryJobs] ImportFromAmericanas - Categories imported!");
+
+                    var americanasCategories = await _americanasExternalService.GetCategoriesData();
+
+                    Parallel.ForEach(americanasCategories, opts, async categoryDTO =>
+                    {
+                        await QueueCategoriesAsync(await _americanasExternalService.GetCategoryAdditionalData(categoryDTO));
+                    });
+
+                    LogInfo($"[CategoryJobs] {dataProvider} - Number of imported categories: {americanasCategories.Count()}");
+
                     break;
+
                 case DataProvider.Submarino:
-                    LogInfo($"[ProductCategoryJobs] ImportFromSubmarino - Getting categories...");
-                    QueueCategories(await _submarinoExternalService.GetProductCategories());
-                    LogInfo($"[ProductCategoryJobs] ImportFromSubmarino - Categories imported!");
+                    
+                    var submarinoCategories = await _submarinoExternalService.GetCategoriesData();
+
+                    Parallel.ForEach(submarinoCategories, opts, async categoryDTO =>
+                    {
+                        await QueueCategoriesAsync(await _submarinoExternalService.GetCategoryAdditionalData(categoryDTO));
+                    });
+
+                    LogInfo($"[CategoryJobs] {dataProvider} - Number of imported categories: {submarinoCategories.Count()}");
+
                     break;
+
                 case DataProvider.Shoptime:
-                    LogInfo($"[ProductCategoryJobs] ImportFromShoptime - Getting categories...");
-                    QueueCategories(await _shoptimeExternalService.GetProductCategories());
-                    LogInfo($"[ProductCategoryJobs] ImportFromShoptime - Categories imported!");
+                    
+                    var shoptimeCategories = await _shoptimeExternalService.GetCategoriesData();
+
+                    Parallel.ForEach(shoptimeCategories, opts, async categoryDTO =>
+                    {
+                       await QueueCategoriesAsync(await _shoptimeExternalService.GetCategoryAdditionalData(categoryDTO));
+                    });
+
+                    LogInfo($"[CategoryJobs] {dataProvider} - Number of imported categories: {shoptimeCategories.Count()}");
                     break;
             }
 
-            LogInfo($"[ProductCategoryJobs] Job finished...");
+            
+            LogInfo($"[CategoryJobs] Job finished...");
         }
 
-        private void QueueCategories(List<CategoryDTO> categories)
+        private async Task QueueCategoriesAsync(CategoryDTO[] categories)
         {
             var commands = categories.Select(category =>
             {
@@ -64,23 +91,22 @@ namespace ProductCatalog.Application.Jobs
                                                         category.IsActive, category.NumberOfProducts, category.DataProvider);
             }).ToList();
 
-            if (commands.Any())
+            LogInfo($"[ProductCategoryJobs] Queueing categories: {commands.Count}");
+
+            foreach(var command in commands)
             {
                 try
                 {
-                    LogInfo($"[ProductCategoryJobs] Queueing categories: {commands.Count}");
+                    await _messagePublisher.Publish(command);
 
-                    var queueTask = _messagePublisher.Publish(new CreateNewCategoriesCommand(commands));
-
-                    queueTask.Wait();
-
-                    LogInfo($"[ProductCategoryJobs] {commands.Count} categories queued!");
                 }
                 catch (Exception ex)
                 {
                     LogError($"[Error] {ex.Message}");
                 }
-            }
+            };
+
+            LogInfo($"[ProductCategoryJobs] {commands.Count} categories queued!");
         }
     }
 }
