@@ -42,6 +42,7 @@ namespace ProductCatalog.Application.BackgroundServices
             _logger.LogInformation("[ImportProductsService] Registering MessageHandler...");
             _subscriptionClient.RegisterMessageHandler((message, token) =>
             {
+                _logger.LogInformation($"[ImportProductsService] Starting Import Products Process...");
                 _logger.LogInformation($"[ImportProductsService] Processing CategoryUpdatedEvent message...");
 
                 var messageBody = Encoding.UTF8.GetString(message.Body).Decompress();
@@ -59,6 +60,7 @@ namespace ProductCatalog.Application.BackgroundServices
                     task.Wait();
                 }
 
+                _logger.LogInformation($"[ImportProductsService] Process End.");
                 return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)

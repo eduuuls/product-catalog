@@ -103,8 +103,6 @@ namespace ProductCatalog.Domain.Commands
             category.AddDomainEvent(new CategoryUpdatedEvent(category.Id, category.Name, category.SubType, category.Description,
                                             category.Url, category.ImageUrl, category.IsActive, category.NumberOfProducts, category.DataProvider));
 
-            _categoriesRepository.Update(category);
-
             return await Commit(_categoriesRepository.UnitOfWork);
         }
     }

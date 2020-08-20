@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
+using Microsoft.Azure.ServiceBus.Core;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using ProductCatalog.Application.Configuration;
@@ -26,7 +27,7 @@ namespace ProductCatalog.Application.MessagePublishers
             else if (typeof(T).Name == "ProductReviewsJob")
                 topic = serviceBusConfig.Value.Topics.First(t => t.Key == "ReviewsTopic");
 
-            _topicClient = new TopicClient(connectionString: serviceBusConfig.Value.ConnectionString, entityPath: topic.Name);
+            _topicClient = new TopicClient(connectionString: serviceBusConfig.Value.ConnectionString, entityPath: topic.Name, retryPolicy: RetryPolicy.Default);
             _topicClient.OperationTimeout = TimeSpan.FromSeconds(60);
         }
         public Task Publish<U>(U obj)

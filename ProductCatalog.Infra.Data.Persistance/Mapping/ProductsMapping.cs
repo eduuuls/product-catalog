@@ -34,8 +34,12 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
                     .HasMaxLength(1000)
                         .IsRequired();
 
-            builder.Property("DataProvider");
-            
+            builder.Property("DataProvider")
+                        .IsRequired();
+
+            builder.Property("RelevancePoints")
+                        .IsRequired();
+
             builder.HasOne(x => x.ProductCategory)
                     .WithMany(x=> x.Products)
                     .HasForeignKey(c => c.CategoryId)

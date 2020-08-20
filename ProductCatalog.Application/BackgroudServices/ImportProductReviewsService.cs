@@ -42,7 +42,7 @@ namespace ProductCatalog.Application.BackgroundServices
             _logger.LogInformation("[ImportProductReviewsService] Registering MessageHandler...");
             _subscriptionClient.RegisterMessageHandler((message, token) =>
             {
-                _logger.LogInformation($"[ImportProductReviewsService] Processing ProductCreatedEvent message...");
+                _logger.LogInformation($"[ImportProductReviewsService] Starting Import Product Reviews Process...");
 
                 var messageBody = Encoding.UTF8.GetString(message.Body).Decompress();
 
@@ -50,8 +50,11 @@ namespace ProductCatalog.Application.BackgroundServices
                 
                 var productViewModel = _mapper.Map<ProductViewModel>(productCreatedEvent);
 
-                _productReviewsJob.ImportProductReviews(productViewModel);
+                var task = _productReviewsJob.ImportProductReviews(productViewModel);
                 
+                task.Wait();
+
+                _logger.LogInformation($"[ImportProductReviewsService] Process End.");
                 return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)

@@ -5,9 +5,6 @@ using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Events;
 using ProductCatalog.Domain.Interfaces.Repositories;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,10 +15,12 @@ namespace ProductCatalog.Domain.Commands
                                             IRequestHandler<CreateNewProductCommand, ValidationResult>
     {
         private readonly IProductsRepository _productsRepository;
+        private readonly IProductsDetailRepository _productsDetailRepository;
 
-        public ProductsCommandHandler(IProductsRepository productsRepository)
+        public ProductsCommandHandler(IProductsRepository productsRepository, IProductsDetailRepository productsDetailRepository)
         {
             _productsRepository = productsRepository;
+            _productsDetailRepository = productsDetailRepository;
         }
 
         public async Task<ValidationResult> Handle(CreateNewProductsCommand message, CancellationToken cancellationToken)
@@ -74,11 +73,7 @@ namespace ProductCatalog.Domain.Commands
                                         message.Code, message.Brand, message.Manufacturer, message.Model, message.ReferenceModel, message.Supplier, 
                                             message.OtherSpecs, message.Url, message.ImageUrl, message.DataProvider, message.Reviews);
 
-            var task = _productsRepository.GetByKey(product.CategoryId, product.ExternalId, product.DataProvider);
-
-            task.Wait();
-
-            var existingProduct = task.Result;
+            var existingProduct = await _productsRepository.GetByKey(product.CategoryId, product.ExternalId, product.DataProvider);
 
             if (existingProduct != null)
             {
@@ -86,7 +81,18 @@ namespace ProductCatalog.Domain.Commands
                 existingProduct.Name = product.Name;
                 existingProduct.ImageUrl = product.ImageUrl;
                 existingProduct.Url = product.Url;
-                existingProduct.Detail = product.Detail;
+                existingProduct.RelevancePoints = product.RelevancePoints;
+
+                var existingProductDetail = await _productsDetailRepository.GetByProductId(existingProduct.Id);
+
+                existingProductDetail.Manufacturer = product.Detail.Manufacturer;
+                existingProductDetail.Model = product.Detail.Model;
+                existingProductDetail.BarCode = product.Detail.BarCode;
+                existingProductDetail.Brand = product.Detail.Brand;
+                existingProductDetail.Code = product.Detail.Code;
+                existingProductDetail.ReferenceModel = product.Detail.ReferenceModel;
+                existingProductDetail.Supplier = product.Detail.Supplier;
+                existingProductDetail.OtherSpecs = product.Detail.OtherSpecs;
 
                 product.AddDomainEvent(new ProductUpdatedEvent(existingProduct.Id, existingProduct.CategoryId, existingProduct.ExternalId, existingProduct.Name,
                                                                 existingProduct.Description, existingProduct.Url, existingProduct.ImageUrl, existingProduct.DataProvider,

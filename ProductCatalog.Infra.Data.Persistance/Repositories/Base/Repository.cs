@@ -15,6 +15,7 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories.Base
         readonly protected IUnitOfWork _unitOfWork;
         readonly protected ProductsCatalogDbContext _context;
         readonly DbSet<T> _entity;
+        public bool AsNoTracking { get; set; }
 
         public Repository(ProductsCatalogDbContext context, IUnitOfWork unitOfWork)
         {
@@ -50,9 +51,9 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories.Base
             _entity.Remove(entidade);
         }
 
-        public IQueryable<T> List(bool asNoTracking = true)
+        public IQueryable<T> List()
         {
-            if (asNoTracking)
+            if (AsNoTracking)
                 return _entity.AsNoTracking();
             else
                 return _entity;

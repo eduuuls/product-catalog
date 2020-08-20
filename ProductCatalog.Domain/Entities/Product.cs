@@ -1,5 +1,6 @@
 ﻿using ProductCatalog.Domain.Entities.Base;
 using ProductCatalog.Domain.Enums;
+using ProductCatalog.Domain.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -36,7 +37,7 @@ namespace ProductCatalog.Domain.Entities
                 Supplier = supplier,
                 OtherSpecs = otherSpecs,
             };
-
+            RelevancePoints = Detail.GetRelevancePoints();
             Reviews = reviews;
         }
 
@@ -47,6 +48,7 @@ namespace ProductCatalog.Domain.Entities
         public string Url { get; set; }
         public string ImageUrl { get; set; }
         public DataProvider DataProvider { get; set; }
+        public int RelevancePoints { get; set; }
         public ProductDetail Detail { get; set; }
         public IEnumerable<ProductReview> Reviews { get; set; }
         public Category ProductCategory { get; set; }

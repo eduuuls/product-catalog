@@ -47,7 +47,8 @@ namespace ProductCatalog.Infra.CrossCutting.Bus
         private async Task SendMessage<T>(object obj, string topicKey, string messageType)
         {
             var topic = _serviceBusConfiguration.Topics.First(t => t.Key == topicKey);
-            var topicClient = new TopicClient(connectionString: _serviceBusConfiguration.ConnectionString, entityPath: topic.Name);
+            var topicClient = new TopicClient(connectionString: _serviceBusConfiguration.ConnectionString, 
+                                                    entityPath: topic.Name, retryPolicy: RetryPolicy.Default);
 
             try
             {

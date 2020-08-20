@@ -1,7 +1,6 @@
 ﻿using Firebase.Auth;
 using Firebase.Storage;
 using HtmlAgilityPack;
-using Microsoft.EntityFrameworkCore.Update.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -20,6 +19,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace ProductCatalog.Infra.Data.ExternalServices.Base
 {
@@ -29,6 +29,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         private readonly ChromeOptions _chromeOptions;
         private readonly DataProvider _dataProvider;
         private readonly FirebaseConfiguration _firebaseConfiguration;
+        FirebaseAuthProvider _firebaseAuthProvider;
         private readonly FirebaseAuthLink _authLink;
         public B2WExternalService(IHttpClientFactory httpClientFactory,
                                     ILogger logger,
@@ -45,9 +46,9 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
             _firebaseConfiguration = firebaseConfiguration.Value;
 
-            FirebaseAuthProvider firebaseAuthProvider = new FirebaseAuthProvider(new FirebaseConfig(_firebaseConfiguration.Apikey));
+            _firebaseAuthProvider = new FirebaseAuthProvider(new FirebaseConfig(_firebaseConfiguration.Apikey));
 
-            _authLink = firebaseAuthProvider.SignInWithEmailAndPasswordAsync(_firebaseConfiguration.AuthEmail, _firebaseConfiguration.AuthPassword).Result;
+            _authLink = _firebaseAuthProvider.SignInWithEmailAndPasswordAsync(_firebaseConfiguration.AuthEmail, _firebaseConfiguration.AuthPassword).Result;
         }
         public async Task<CategoryDTO[]> GetCategoriesData()
         {
@@ -232,8 +233,8 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                         productReview.Date = Convert.ToDateTime(review.SubmissionTime, CultureInfo.GetCultureInfo("pt-BR"));
 
                         productReview.ExternalId = review.Id;
-                        productReview.Title = review.Title;
-                        productReview.Text = review.ReviewText;
+                        productReview.Title = HttpUtility.HtmlDecode(review.Title);
+                        productReview.Text = HttpUtility.HtmlDecode(review.ReviewText);
                         productReview.Stars = review.Rating;
 
                         if(review.IsRecommended.HasValue)
@@ -355,11 +356,11 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                     techSpecs.Remove(barCode);
 
                     var model = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("MODELO"));
-                    productDTO.Model = model.Value;
+                    productDTO.Model = HttpUtility.HtmlDecode(model.Value);
                     techSpecs.Remove(model);
 
                     var brand = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("MARCA"));
-                    productDTO.Brand = brand.Value;
+                    productDTO.Brand = HttpUtility.HtmlDecode(brand.Value);
                     techSpecs.Remove(brand);
 
                     var code = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("CÓDIGO"));
@@ -367,15 +368,15 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                     techSpecs.Remove(code);
 
                     var manufacturer = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("FABRICANTE"));
-                    productDTO.Manufacturer = manufacturer.Value;
+                    productDTO.Manufacturer = HttpUtility.HtmlDecode(manufacturer.Value);
                     techSpecs.Remove(manufacturer);
 
                     var referenceModel = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("REFERÊNCIA DO MODELO"));
-                    productDTO.ReferenceModel = referenceModel.Value;
+                    productDTO.ReferenceModel = HttpUtility.HtmlDecode(referenceModel.Value);
                     techSpecs.Remove(referenceModel);
 
                     var supplier = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("FORNECEDOR"));
-                    productDTO.Supplier = supplier.Value;
+                    productDTO.Supplier = HttpUtility.HtmlDecode(supplier.Value);
                     techSpecs.Remove(supplier);
 
                     ConcurrentDictionary<string, string> specs = new ConcurrentDictionary<string, string>();
@@ -401,8 +402,10 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             FirebaseStorageOptions firebaseStorageOptions = new FirebaseStorageOptions();
             var cancelationToken = new CancellationTokenSource();
             string resultUrl = string.Empty;
+            
+            var authLink = await _authLink.GetFreshAuthAsync();
 
-            firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(_authLink.FirebaseToken);
+            firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(authLink.FirebaseToken);
             firebaseStorageOptions.ThrowOnCancel = true;
 
             var storage = new FirebaseStorage(_firebaseConfiguration.StorageBucketUrl, firebaseStorageOptions);
@@ -419,6 +422,9 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                                             .Child("products")
                                                 .Child($"Category-{product.CategoryId}")
                                                     .Child($"{product.ExternalId}.{imageExtension}").PutAsync(imageStream);
+
+                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Image uploaded to Firebase successfully!");
+                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Firebase image URL: {resultUrl}.");
             }
             else
             {
@@ -434,16 +440,16 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             if (!string.IsNullOrEmpty(categoryName))
             {
                 productCategory.Name = categoryName;
-                productCategory.SubType = categoryElement.InnerText.Trim();
+                productCategory.SubType = HttpUtility.HtmlDecode(categoryElement.InnerText.Trim());
             }
             else
-                productCategory.Name = categoryElement.InnerText.Trim();
+                productCategory.Name = HttpUtility.HtmlDecode(categoryElement.InnerText.Trim());
 
             _logger.LogInformation($"[ConvertHtmlToCategory] Got category: {productCategory.Name}!");
 
             productCategory.DataProvider = _dataProvider;
 
-            productCategory.Url = string.Concat(_websiteConfiguration.BaseAdress, categoryElement.GetAttributeValue("href"));
+            productCategory.Url = HttpUtility.UrlDecode(string.Concat(_websiteConfiguration.BaseAdress, categoryElement.GetAttributeValue("href")));
 
             return productCategory;
         }
@@ -457,7 +463,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
             var detailUrl = productElement.GetAttributeValue("href");
 
-            product.Url = $"{_websiteConfiguration.BaseAdress}{detailUrl}";
+            product.Url = HttpUtility.UrlDecode($"{_websiteConfiguration.BaseAdress}{detailUrl}");
 
             var endIdIndex = detailUrl.IndexOf("?");
 
@@ -468,7 +474,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                                         .FirstOrDefault();
 
             if (name != null)
-                product.Name = name.InnerText;
+                product.Name = HttpUtility.HtmlDecode(name.InnerText);
 
             _logger.LogInformation($"[ConvertHtmlToProduct] Got product: {product.Name}!");
 

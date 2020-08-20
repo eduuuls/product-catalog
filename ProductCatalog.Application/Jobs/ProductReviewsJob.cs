@@ -30,30 +30,9 @@ namespace ProductCatalog.Application.Jobs
             _messagePublisher = messagePublisher;
         }
 
-        public void ImportProductReviews(ProductViewModel productViewModel)
+        public async Task ImportProductReviews(ProductViewModel productViewModel)
         {
             LogInfo($"[ProductReviewsJob] Starting Job...");
-
-            switch (productViewModel.DataProvider)
-            {
-                case DataProvider.Americanas:
-                    ImportFromAmericanas(productViewModel);
-                    break;
-                case DataProvider.Submarino:
-                    ImportFromAmericanas(productViewModel);
-                    break;
-                case DataProvider.Shoptime:
-                    ImportFromAmericanas(productViewModel);
-                    break;
-                case DataProvider.Buscape:
-                    break;
-            }
-
-            LogInfo($"[ProductReviewsJob] Finishing Job...");
-        }
-
-        private void ImportFromAmericanas(ProductViewModel productViewModel)
-        {
             LogInfo($"[ProductReviewsJob] ImportFromAmericanas - Getting reviews...");
 
             List<ProductReview> reviews = new List<ProductReview>();
@@ -66,34 +45,76 @@ namespace ProductCatalog.Application.Jobs
             requestB2WReviewDTO.Limit = "limit=50";
             requestB2WReviewDTO.Sort = "sort=SubmissionTime:asc";
 
-            while(goNext)
+            while (goNext)
             {
                 LogInfo($"[ProductReviewsJob] ImportFromAmericanas - Getting reviews for product:{productViewModel.Name}...");
-                
+
                 requestB2WReviewDTO.Offset = $"offset={offset}";
 
-                var productReviewTask = _americanasExternalService.GetProductReviews(requestB2WReviewDTO);
-
-                productReviewTask.Wait();
-
-                if (productReviewTask.Result != null)
+                switch (productViewModel.DataProvider)
                 {
-                    reviews.AddRange(_mapper.Map<List<ProductReview>>(productReviewTask.Result));
+                    case DataProvider.Americanas:
 
-                    goNext = productReviewTask.Result.Count == 50;
+                        var americanasProductReviews = await _americanasExternalService.GetProductReviews(requestB2WReviewDTO);
+                        
+                        if (americanasProductReviews != null)
+                        {
+                            reviews.AddRange(_mapper.Map<List<ProductReview>>(americanasProductReviews));
+
+                            goNext = americanasProductReviews.Count == 50;
+                        }
+                        else
+                            goNext = false;
+
+                        break;
+                    case DataProvider.Submarino:
+
+                        var submarinoProductReviews = await _americanasExternalService.GetProductReviews(requestB2WReviewDTO);
+
+                        if (submarinoProductReviews != null)
+                        {
+                            reviews.AddRange(_mapper.Map<List<ProductReview>>(submarinoProductReviews));
+
+                            goNext = submarinoProductReviews.Count == 50;
+                        }
+                        else
+                            goNext = false;
+
+                        break;
+                    case DataProvider.Shoptime:
+
+                        var shoptimeProductReviews = await _americanasExternalService.GetProductReviews(requestB2WReviewDTO);
+
+                        if (shoptimeProductReviews != null)
+                        {
+                            reviews.AddRange(_mapper.Map<List<ProductReview>>(shoptimeProductReviews));
+
+                            goNext = shoptimeProductReviews.Count == 50;
+                        }
+                        else
+                            goNext = false;
+
+                        break;
+                    case DataProvider.Buscape:
+                        break;
                 }
-                else
-                    goNext = false;
-
+                
                 offset += 50;
 
-                if(reviews.Count >= MAX_REVIEWS)
+                if (reviews.Count >= MAX_REVIEWS)
                     goNext = false;
             }
 
+            await QueueReviews(productViewModel.Id, reviews);
+
+            LogInfo($"[ProductReviewsJob] Finishing Job...");
+        }
+
+        private async Task QueueReviews(Guid id, List<ProductReview> reviews)
+        {
             var commands = reviews.Select(review =>
             {
-                return new AddProductReviewCommand(productViewModel.Id, review.ExternalId, review.Reviewer, review.Date, review.Title,
+                return new AddProductReviewCommand(id, review.ExternalId, review.Reviewer, review.Date, review.Title,
                                                         review.Text, review.Stars, review.Result, review.IsRecommended);
             }).ToList();
 
@@ -103,9 +124,7 @@ namespace ProductCatalog.Application.Jobs
                 {
                     LogInfo($"[ProductCategoryJobs] Queueing product reviews: {commands.Count}");
 
-                    var queueTask = _messagePublisher.Publish(new AddProductReviewsCommand(commands));
-
-                    queueTask.Wait();
+                    await _messagePublisher.Publish(new AddProductReviewsCommand(commands));
 
                     LogInfo($"[ProductReviewsJob] Product reviews queued!");
                 }

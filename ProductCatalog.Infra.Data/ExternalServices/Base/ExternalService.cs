@@ -186,8 +186,8 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         }
         private int GenerateBeathTime()
         {
-            var minValue = _random.Next(1000, 30000);
-            var maxValue = _random.Next(31000, 60000);
+            var minValue = _random.Next(1000, 60000);
+            var maxValue = _random.Next(61000, 120000);
 
             return _random.Next(minValue, maxValue);
         }

@@ -13,8 +13,7 @@ namespace ProductCatalog.Infra.Data.Persistance
         public ProductsCatalogDbContext(DbContextOptions<ProductsCatalogDbContext> options)
              : base(options)
         {
-            ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
-            ChangeTracker.AutoDetectChangesEnabled = false;
+
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
