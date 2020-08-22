@@ -40,7 +40,7 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
             builder.Property("RelevancePoints")
                         .IsRequired();
 
-            builder.HasOne(x => x.ProductCategory)
+            builder.HasOne(x => x.Category)
                     .WithMany(x=> x.Products)
                     .HasForeignKey(c => c.CategoryId)
                     .IsRequired();

@@ -1,29 +1,17 @@
-﻿using ProductCatalog.Domain.Commands.Base;
-using ProductCatalog.Domain.Entities;
+﻿using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Enums;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace ProductCatalog.Domain.Commands
+namespace ProductCatalog.Domain.DTO.Query
 {
-    public abstract class ProductCommand: Command
+    public class ProductQueryDTO
     {
-        public ProductCommand(MessageDestination destination, string type)
-            : base(destination, type)
-        {
-
-        }
-        public Guid Id { get; protected set; }
-        public Guid CategoryId { get; set; }
-        public string ExternalId { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
-        public string Url { get; set; }
         public string ImageUrl { get; set; }
         public DataProvider DataProvider { get; set; }
         public int RelevancePoints { get; set; }
-        public string Code { get; set; }
         public string BarCode { get; set; }
         public string Brand { get; set; }
         public string Manufacturer { get; set; }

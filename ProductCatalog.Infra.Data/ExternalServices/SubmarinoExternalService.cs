@@ -2,9 +2,9 @@
 using ProductCatalog.Domain.Interfaces.ExternalServices;
 using OpenQA.Selenium.Chrome;
 using Microsoft.Extensions.Logging;
-using ProductCatalog.Infra.Data.Configuration;
 using Microsoft.Extensions.Options;
 using ProductCatalog.Domain.Enums;
+using ProductCatalog.Domain.Configuration;
 
 namespace ProductCatalog.Infra.Data.ExternalServices
 {
@@ -13,14 +13,12 @@ namespace ProductCatalog.Infra.Data.ExternalServices
         public SubmarinoExternalService(ILogger<SubmarinoExternalService> logger,
                                             IHttpClientFactory httpClientFactory,
                                                 IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
-                                                    IOptions<FirebaseConfiguration> firebaseConfiguration,
-                                                        ChromeOptions chromeOptions) 
+                                                    ChromeOptions chromeOptions) 
             : base(httpClientFactory,
                     logger,
                         chromeOptions,
                             externalServicesConfiguraiton, 
-                                firebaseConfiguration,
-                                    DataProvider.Submarino)
+                                DataProvider.Submarino)
         {
         }
     }

@@ -6,12 +6,12 @@ using System.Collections.Generic;
 
 namespace ProductCatalog.Domain.Events
 {
-    public class ProductCreatedEvent : Event
+    public class ProductCreatedUpdatedEvent : Event
     {
-        public ProductCreatedEvent(Guid id, Guid categoryId, string externalId, string name, string description,
+        public ProductCreatedUpdatedEvent(Guid id, Guid categoryId, string externalId, string name, string description,
                                         string url, string imageUrl, DataProvider dataProvider, ProductDetail detail,
                                             IEnumerable<ProductReview> reviews)
-            : base(MessageDestination.ServiceBusMessage, typeof(ProductCreatedEvent).Name)
+            : base(MessageDestination.ServiceBusMessage, typeof(ProductCreatedUpdatedEvent).Name)
         {
             Id = id;
             CategoryId = categoryId;
@@ -23,7 +23,7 @@ namespace ProductCatalog.Domain.Events
             DataProvider = dataProvider;
             Detail = detail;
             Reviews = reviews;
-            TopicKey = "ProductTopic";
+            TopicKey = "EventHubTopic";
         }
 
         public Guid Id { get; protected set; }

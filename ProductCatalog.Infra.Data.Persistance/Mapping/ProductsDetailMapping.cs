@@ -40,7 +40,11 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
             builder.Property("OtherSpecs")
                     .HasColumnType("varchar(8000)")
                         .HasMaxLength(8000);
-            
+
+            builder.Property("MergedProductsId")
+                    .HasColumnType("varchar(4000)")
+                    .HasMaxLength(4000);
+
             builder.Property("ProductId");
             
             builder.HasOne(x => x.Product)

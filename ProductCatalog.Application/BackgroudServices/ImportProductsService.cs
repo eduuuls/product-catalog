@@ -30,11 +30,11 @@ namespace ProductCatalog.Application.BackgroundServices
             _logger = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILogger<ImportProductsService>>();
             _productJob = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IProductJob>();
 
-            var topic = serviceBusConfig.Value.Topics.First(t => t.Key == "CategoryTopic");
+            var topic = serviceBusConfig.Value.Topics.First(t => t.Key == "EventHubTopic");
 
             _subscriptionClient = new SubscriptionClient(connectionString: serviceBusConfig.Value.ConnectionString,
                                                 topicPath: topic.Name,
-                                                    subscriptionName: topic.Subscriptions.First(s => s.Key == "UpdatedSubscription").Name);
+                                                    subscriptionName: topic.Subscriptions.First(s => s.Key == "CategoryUpdatedSubscription").Name);
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)

@@ -5,10 +5,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FirebaseAuthentication.net" Version="3.4.0" />
+    <PackageReference Include="FirebaseStorage.net" Version="1.0.3" />
     <PackageReference Include="FluentValidation" Version="9.0.1" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.24" />
     <PackageReference Include="MediatR" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="3.1.6" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.6" />
     <PackageReference Include="Refit" Version="5.1.67" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Interfaces\Queries\Base\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProductCatalog.Infra.CrossCutting\ProductCatalog.Infra.CrossCutting.csproj" />
   </ItemGroup>
 
 </Project>

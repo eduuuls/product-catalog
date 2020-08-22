@@ -6,6 +6,7 @@ using ProductCatalog.Domain.Interfaces.UoW;
 using ProductCatalog.Infra.Data.Persistance.Repositories.Base;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -27,5 +28,9 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories
             return productReview;
         }
 
+        public async Task<List<ProductReview>> GetByProductId(Guid productId)
+        {
+            return await List().Where(r => r.ProductId == productId).ToListAsync();
+        }
     }
 }

@@ -1,15 +1,13 @@
-﻿using Firebase.Auth;
-using Firebase.Storage;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using OpenQA.Selenium.Chrome;
+using ProductCatalog.Domain.Configuration;
 using ProductCatalog.Domain.DTO;
 using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Enums;
 using ProductCatalog.Domain.Interfaces.ExternalServices;
-using ProductCatalog.Infra.Data.Configuration;
 using ScrapySharp.Extensions;
 using System;
 using System.Collections.Concurrent;
@@ -17,7 +15,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -28,14 +25,11 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         private readonly WebsiteConfiguration _websiteConfiguration;
         private readonly ChromeOptions _chromeOptions;
         private readonly DataProvider _dataProvider;
-        private readonly FirebaseConfiguration _firebaseConfiguration;
-        FirebaseAuthProvider _firebaseAuthProvider;
-        private readonly FirebaseAuthLink _authLink;
+
         public B2WExternalService(IHttpClientFactory httpClientFactory,
                                     ILogger logger,
                                     ChromeOptions chromeOptions,
                                         IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
-                                            IOptions<FirebaseConfiguration> firebaseConfiguration,
                                             DataProvider dataProvider) : base(httpClientFactory, logger)
         {
             _dataProvider = dataProvider;
@@ -44,11 +38,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                                             .WebsiteConfigurations?
                                                 .FirstOrDefault(w => w.Key == dataProvider.ToString());
 
-            _firebaseConfiguration = firebaseConfiguration.Value;
 
-            _firebaseAuthProvider = new FirebaseAuthProvider(new FirebaseConfig(_firebaseConfiguration.Apikey));
-
-            _authLink = _firebaseAuthProvider.SignInWithEmailAndPasswordAsync(_firebaseConfiguration.AuthEmail, _firebaseConfiguration.AuthPassword).Result;
         }
         public async Task<CategoryDTO[]> GetCategoriesData()
         {
@@ -336,7 +326,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 var image = detailResponse.CssSelect("meta[property='og:image']").FirstOrDefault();
 
                 if (image != null)
-                    productDTO.ImageUrl = await UploadImageToFirebase(productDTO, image.GetAttributeValue("content"));
+                    productDTO.ImageUrl = image.GetAttributeValue("content");
 
                 var techSpecs = detailResponse.CssSelect("table[class^=TableUI]")
                                                     .CssSelect("tr[class^=Tr]")
@@ -396,42 +386,6 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             }
 
             return productDTO;
-        }
-        private async Task<string> UploadImageToFirebase(ProductDTO product, string imageUrl)
-        {
-            FirebaseStorageOptions firebaseStorageOptions = new FirebaseStorageOptions();
-            var cancelationToken = new CancellationTokenSource();
-            string resultUrl = string.Empty;
-            
-            var authLink = await _authLink.GetFreshAuthAsync();
-
-            firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(authLink.FirebaseToken);
-            firebaseStorageOptions.ThrowOnCancel = true;
-
-            var storage = new FirebaseStorage(_firebaseConfiguration.StorageBucketUrl, firebaseStorageOptions);
-
-            var imageExtension = imageUrl.Split(".").Last();
-
-            _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Requesting image from URL...");
-
-            var imageStream = await ExecuteImageRequest(imageUrl);
-
-            if (imageStream != null)
-            {
-                resultUrl = await storage.Child("images")
-                                            .Child("products")
-                                                .Child($"Category-{product.CategoryId}")
-                                                    .Child($"{product.ExternalId}.{imageExtension}").PutAsync(imageStream);
-
-                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Image uploaded to Firebase successfully!");
-                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Firebase image URL: {resultUrl}.");
-            }
-            else
-            {
-                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Image not found at URL: {imageUrl}.");
-            }
-
-            return resultUrl;
         }
         private CategoryDTO ConvertHtmlToCategory(HtmlNode categoryElement, string categoryName = null)
         {

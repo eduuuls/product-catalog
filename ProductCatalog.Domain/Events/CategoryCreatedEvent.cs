@@ -22,7 +22,7 @@ namespace ProductCatalog.Domain.Events
             IsActive = isActive;
             NumberOfProducts = numberOfProducts;
             DataProvider = dataProvider;
-            TopicKey = "CategoryTopic";
+            TopicKey = "EventHubTopic";
         }
 
         public Guid Id { get; set; }

@@ -30,11 +30,11 @@ namespace ProductCatalog.Application.BackgroundServices
             _logger = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<ILogger<ImportProductReviewsService>>();
             _productReviewsJob = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IProductReviewsJob>();
 
-            var topic = serviceBusConfig.Value.Topics.First(t => t.Key == "ProductTopic");
+            var topic = serviceBusConfig.Value.Topics.First(t => t.Key == "EventHubTopic");
 
             _subscriptionClient = new SubscriptionClient(connectionString: serviceBusConfig.Value.ConnectionString,
                                                 topicPath: topic.Name,
-                                                    subscriptionName: topic.Subscriptions.First(s => s.Key == "CreatedSubscription").Name);
+                                                    subscriptionName: topic.Subscriptions.First(s => s.Key == "ProductCreatedUpdatedSubscription").Name);
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -46,9 +46,9 @@ namespace ProductCatalog.Application.BackgroundServices
 
                 var messageBody = Encoding.UTF8.GetString(message.Body).Decompress();
 
-                var productCreatedEvent = JsonConvert.DeserializeObject<ProductCreatedEvent>(messageBody);
+                var productCreatedUpdatedEvent = JsonConvert.DeserializeObject<ProductCreatedUpdatedEvent>(messageBody);
                 
-                var productViewModel = _mapper.Map<ProductViewModel>(productCreatedEvent);
+                var productViewModel = _mapper.Map<ProductViewModel>(productCreatedUpdatedEvent);
 
                 var task = _productReviewsJob.ImportProductReviews(productViewModel);
                 

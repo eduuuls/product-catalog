@@ -1,5 +1,6 @@
 ﻿using FluentValidation.Results;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using ProductCatalog.Domain.Commands.Base;
 using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Events;
@@ -19,7 +20,8 @@ namespace ProductCatalog.Domain.Commands
     {
         private readonly ICategoriesRepository _categoriesRepository;
 
-        public CategoriesCommandHandler(ICategoriesRepository categoriesRepository)
+        public CategoriesCommandHandler(ILogger<ProductReviewsCommandHandler> logger, ICategoriesRepository categoriesRepository)
+            : base(logger)
         {
             _categoriesRepository = categoriesRepository;
         }

@@ -18,11 +18,11 @@ using ProductCatalog.Infra.CrossCutting.Extensions;
 
 namespace ProductCatalog.Application.BackgroundServices
 {
-    public class CreateProductsConsumerService : BackgroundService
+    public class CreateProductsConsumer : BackgroundService
     {
         private readonly IMediatorHandler _mediatorHandler;
         private readonly ISubscriptionClient _subscriptionClient;
-        public CreateProductsConsumerService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
+        public CreateProductsConsumer(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
         {
             _mediatorHandler = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IMediatorHandler>();
             

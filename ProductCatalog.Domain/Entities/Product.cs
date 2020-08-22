@@ -51,6 +51,6 @@ namespace ProductCatalog.Domain.Entities
         public int RelevancePoints { get; set; }
         public ProductDetail Detail { get; set; }
         public IEnumerable<ProductReview> Reviews { get; set; }
-        public Category ProductCategory { get; set; }
+        public Category Category { get; set; }
     }
 }

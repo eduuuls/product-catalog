@@ -11,6 +11,7 @@ namespace ProductCatalog.Domain.Interfaces.Repositories.Base
         bool AsNoTracking { get; set; }
         void Add(T entidade);
         void Update(T entidade);
+        void UpdateRange(T[] entities);
         void Delete(params int[] id);
         void Delete(T entidade);
         T Search(params int[] id);

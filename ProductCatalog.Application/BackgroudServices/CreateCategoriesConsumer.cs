@@ -1,15 +1,10 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoMapper;
-using MediatR;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using ProductCatalog.Domain.Commands;
@@ -18,15 +13,15 @@ using ProductCatalog.Infra.CrossCutting.Extensions;
 
 namespace ProductCatalog.Application.BackgroundServices
 {
-    public class AddProductReviewsConsumerService : BackgroundService
+    public class CreateCategoriesConsumer : BackgroundService
     {
         private readonly IMediatorHandler _mediatorHandler;
         private readonly ISubscriptionClient _subscriptionClient;
-        public AddProductReviewsConsumerService(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
+        public CreateCategoriesConsumer(IServiceScopeFactory serviceScopeFactory, IOptions<ServiceBusConfiguration> serviceBusConfig)
         {
             _mediatorHandler = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IMediatorHandler>();
             
-            var categoryTopic = serviceBusConfig.Value.Topics.First(t => t.Key == "ReviewsTopic");
+            var categoryTopic = serviceBusConfig.Value.Topics.First(t => t.Key == "CategoryTopic");
 
             _subscriptionClient = new SubscriptionClient(connectionString: serviceBusConfig.Value.ConnectionString,
                                                 topicPath: categoryTopic.Name,
@@ -39,9 +34,9 @@ namespace ProductCatalog.Application.BackgroundServices
             {
                 var messageBody = Encoding.UTF8.GetString(message.Body).Decompress();
 
-                var addProductReviewsCommand = JsonConvert.DeserializeObject<AddProductReviewsCommand>(messageBody);
+                var createNewCategoryCommand = JsonConvert.DeserializeObject<CreateNewCategoryCommand>(messageBody);
 
-                var commandTask = _mediatorHandler.SendCommand(addProductReviewsCommand);
+                var commandTask = _mediatorHandler.SendCommand(createNewCategoryCommand);
 
                 commandTask.Wait();
 
@@ -49,7 +44,6 @@ namespace ProductCatalog.Application.BackgroundServices
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {
-                MaxAutoRenewDuration = TimeSpan.FromMinutes(20),
                 AutoComplete = false,
                 MaxConcurrentCalls = 1
             });

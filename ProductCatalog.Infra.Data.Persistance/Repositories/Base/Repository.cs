@@ -34,6 +34,10 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories.Base
             _entity.Update(entidade);
         }
 
+        public void UpdateRange(T[] entities)
+        {
+            _entity.UpdateRange(entities);
+        }
         public T Search(params int[] id)
         {
             var entidade = _entity.Find(id[0]);

@@ -10,6 +10,8 @@ using MediatR;
 using ProductCatalog.Application.BackgroundServices;
 using Serilog;
 using ProductCatalog.Infra.CrossCutting.Bus;
+using ProductCatalog.Application.Interfaces;
+using ProductCatalog.Application.MessagePublishers;
 
 namespace ProductCatalogApi
 {
@@ -41,12 +43,15 @@ namespace ProductCatalogApi
             services.RegisterEvents();
             services.RegisterRepositories();
             services.RegisterPersistanceConfigurations(Configuration);
+            services.RegisterQueries();
 
             services.AddAutoMapperConfiguration();
             services.AddMediatR(typeof(Startup));
-            services.AddHostedService<CreateCategoriesConsumerService>();
-            services.AddHostedService<CreateProductsConsumerService>();
-            services.AddHostedService<AddProductReviewsConsumerService>();
+            services.AddHostedService<CreateCategoriesConsumer>();
+            services.AddHostedService<CreateProductsConsumer>();
+            services.AddHostedService<AddProductReviewsConsumer>();
+            services.AddHostedService<ProductsMergeDoneEventConsumer>();
+            services.AddHostedService<ProductDataChangedEventConsumer>();
 
             var logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger();
 

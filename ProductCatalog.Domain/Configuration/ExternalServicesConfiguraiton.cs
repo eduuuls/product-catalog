@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ProductCatalog.Infra.Data.Configuration
+namespace ProductCatalog.Domain.Configuration
 {
     public class ExternalServicesConfiguraiton
     {

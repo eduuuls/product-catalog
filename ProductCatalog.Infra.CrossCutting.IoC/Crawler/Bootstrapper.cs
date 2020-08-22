@@ -2,17 +2,15 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenQA.Selenium.Chrome;
-using ProductCatalog.Application.BackgroundServices;
 using ProductCatalog.Application.Configuration;
 using ProductCatalog.Application.AutoMapper;
 using ProductCatalog.Domain.Interfaces.ExternalServices;
-using ProductCatalog.Infra.Data.Configuration;
 using ProductCatalog.Infra.Data.ExternalServices;
 using System.Collections.Generic;
 using ProductCatalog.Application.Interfaces;
 using ProductCatalog.Application.Jobs;
 using ProductCatalog.Application.MessagePublishers;
-using ProductCatalog.Infra.Data.ExternalServices.Base;
+using ProductCatalog.Domain.Configuration;
 
 namespace ProductCatalog.Infra.CrossCutting.IoC.Crawler
 {

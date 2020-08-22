@@ -8,15 +8,16 @@ using OpenQA.Selenium.Chrome;
 using ProductCatalog.Application.Interfaces;
 using ProductCatalog.Application.Services;
 using ProductCatalog.Domain.Commands;
+using ProductCatalog.Domain.Configuration;
 using ProductCatalog.Domain.Events;
 using ProductCatalog.Domain.Interfaces.ExternalServices;
+using ProductCatalog.Domain.Interfaces.Queries;
 using ProductCatalog.Domain.Interfaces.Repositories;
 using ProductCatalog.Domain.Interfaces.UoW;
 using ProductCatalog.Infra.CrossCutting.Bus;
-using ProductCatalog.Infra.Data.Configuration;
 using ProductCatalog.Infra.Data.ExternalServices;
-using ProductCatalog.Infra.Data.ExternalServices.Base;
 using ProductCatalog.Infra.Data.Persistance;
+using ProductCatalog.Infra.Data.Persistance.Queries;
 using ProductCatalog.Infra.Data.Persistance.Repositories;
 using ProductCatalog.Infra.Data.Persistance.UoW;
 using System.Collections.Generic;
@@ -29,6 +30,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
         {
             services.Configure<ExternalServicesConfiguraiton>(opt => configuration.GetSection("ExternalServicesConfiguraiton").Bind(opt));
             services.Configure<ServiceBusConfiguration>(opt => configuration.GetSection("ServiceBusConfiguration").Bind(opt));
+            services.Configure<FirebaseConfiguration>(opt => configuration.GetSection("FirebaseConfiguration").Bind(opt));
         }
         public static void RegisterExternalServices(this IServiceCollection services)
         {
@@ -76,7 +78,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
         {
             var connectionString = configuration.GetSection("ConnectionStrings:productCatalog").Value;
 
-            services.AddDbContext<ProductsCatalogDbContext>(options => options.UseSqlServer(connectionString));
+            services.AddDbContext<ProductsCatalogDbContext>(options => options.UseSqlServer(connectionString, opt => opt.EnableRetryOnFailure()));
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
         }
@@ -88,6 +90,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
             services.AddScoped<IRequestHandler<AddProductReviewsCommand, ValidationResult>, ProductReviewsCommandHandler>();
             services.AddScoped<IRequestHandler<CreateNewProductsCommand, ValidationResult>, ProductsCommandHandler>();
             services.AddScoped<IRequestHandler<CreateNewProductCommand, ValidationResult>, ProductsCommandHandler>();
+            services.AddScoped<IRequestHandler<MergeProductCommand, ValidationResult>, ProductsCommandHandler>();
         }
         public static void RegisterEvents(this IServiceCollection services)
         {
@@ -99,6 +102,11 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
             services.AddScoped<IProductsRepository, ProductsRepository>();
             services.AddScoped<IProductsReviewsRepository, ProductsReviewsRepository>();
             services.AddScoped<IProductsDetailRepository, ProductsDetailRepository>();
+        }
+
+        public static void RegisterQueries(this IServiceCollection services)
+        {
+            services.AddScoped<IProductsQuery, ProductsQuery>();
         }
         public static IApplicationBuilder RunMigrations(this IApplicationBuilder app)
         {

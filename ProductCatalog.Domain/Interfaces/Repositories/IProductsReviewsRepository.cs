@@ -12,5 +12,6 @@ namespace ProductCatalog.Domain.Interfaces.Repositories
     {
         IUnitOfWork UnitOfWork { get; }
         Task<ProductReview> GetByKey(Guid productId, string externalId);
+        Task<List<ProductReview>> GetByProductId(Guid productId);
     }
 }

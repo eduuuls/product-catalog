@@ -33,7 +33,7 @@ namespace ProductCatalog.Application.BackgroundServices
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _subscriptionClient.RegisterMessageHandler(async (message, token) =>
+            _subscriptionClient.RegisterMessageHandler((message, token) =>
             {
                 _logger.LogInformation($"[ImportCategoriesService] Starting Import Category Process...");
                 var command = Encoding.UTF8.GetString(message.Body);
@@ -46,7 +46,7 @@ namespace ProductCatalog.Application.BackgroundServices
 
                 _logger.LogInformation($"[ImportCategoriesService] Process End.");
 
-                await _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {

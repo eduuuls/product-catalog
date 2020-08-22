@@ -17,6 +17,7 @@ namespace ProductCatalog.Domain.Entities
         public string Model { get; set; }
         public string ReferenceModel { get; set; }
         public string OtherSpecs { get; set; }
+        public string MergedProductsId { get; set; }
         [JsonIgnore]
         public Product Product { get; set; }
     }

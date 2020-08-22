@@ -7,6 +7,7 @@ using OpenQA.Selenium.Support.UI;
 using Polly;
 using Polly.Retry;
 using ProductCatalog.Domain.Interfaces.ExternalServices.Base;
+using ProductCatalog.Infra.CrossCutting.Resilience;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -54,7 +55,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 Thread.Sleep(breathTime);
             }
 
-            var response = await GetRetryPolicy().ExecuteAsync(() =>
+            var response = await RetryPolices.GetRetryPolicy().ExecuteAsync(() =>
             {
                 return _httpClient.GetAsync(requestUrl);
             });
@@ -68,7 +69,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
         public async Task<Stream> ExecuteImageRequest(string requestUrl)
         {
-            var response = await GetRetryPolicy().ExecuteAsync(() =>
+            var response = await RetryPolices.GetRetryPolicy().ExecuteAsync(() =>
             {
                 return _httpClient.GetAsync(requestUrl);
             });
@@ -150,7 +151,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 Thread.Sleep(breathTime);
             }
 
-            var response = await GetRetryPolicy().ExecuteAsync(() =>
+            var response = await RetryPolices.GetRetryPolicy().ExecuteAsync(() =>
             {
                 return _httpClient.GetAsync(requestUrl);
             });
@@ -164,7 +165,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36");
 
-            var response = await GetRetryPolicy().ExecuteAsync(() =>
+            var response = await RetryPolices.GetRetryPolicy().ExecuteAsync(() =>
             {
                 return _httpClient.GetAsync(requestUri);
             });
@@ -172,18 +173,6 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             return response;
         }
 
-        private AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy()
-        {
-            return Policy.HandleResult<HttpResponseMessage>(message => message.StatusCode != HttpStatusCode.OK)
-                            .WaitAndRetryAsync(new[]
-                              {
-                                TimeSpan.FromSeconds(5),
-                                TimeSpan.FromSeconds(15),
-                                TimeSpan.FromSeconds(30),
-                                TimeSpan.FromSeconds(45),
-                                TimeSpan.FromSeconds(60)
-                              });
-        }
         private int GenerateBeathTime()
         {
             var minValue = _random.Next(1000, 60000);
