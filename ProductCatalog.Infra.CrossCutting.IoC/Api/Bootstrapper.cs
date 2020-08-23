@@ -78,7 +78,7 @@ namespace ProductCatalog.Infra.CrossCutting.IoC.Api
         {
             var connectionString = configuration.GetSection("ConnectionStrings:productCatalog").Value;
 
-            services.AddDbContext<ProductsCatalogDbContext>(options => options.UseSqlServer(connectionString, opt => opt.EnableRetryOnFailure()));
+            services.AddDbContext<ProductsCatalogDbContext>(options => options.UseSqlServer(connectionString, opt => opt.EnableRetryOnFailure().CommandTimeout(360)));
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
         }

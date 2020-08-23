@@ -13,7 +13,7 @@ namespace ProductCatalog.Infra.Data.Persistance
         public ProductsCatalogDbContext(DbContextOptions<ProductsCatalogDbContext> options)
              : base(options)
         {
-
+            
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
