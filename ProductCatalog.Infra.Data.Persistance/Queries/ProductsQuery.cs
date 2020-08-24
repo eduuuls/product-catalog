@@ -41,6 +41,7 @@ namespace ProductCatalog.Infra.Data.Persistance.Queries
                                     LEFT JOIN [dbo].[ProductsReviews] PR
 	                                    ON P.Id = PR.ProductId
                                     WHERE P.Id = @Id
+                                        AND P.RelevancePoints > 5
                                     ORDER BY P.RelevancePoints DESC";
 
                 var result = await conexao.QueryAsync<dynamic>(query, new { Id = id });

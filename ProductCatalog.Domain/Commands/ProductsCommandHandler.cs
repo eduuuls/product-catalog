@@ -254,7 +254,6 @@ namespace ProductCatalog.Domain.Commands
             LogInfo($"[Handle] {products.Count()} identical products to merge!");
 
             var maxRelevancePoints = products.Max(p => p.RelevancePoints);
-
             var mainProduct = products.First(p => p.RelevancePoints == maxRelevancePoints);
             var productsToMerge = products.Where(p => p.Id != mainProduct.Id);
 

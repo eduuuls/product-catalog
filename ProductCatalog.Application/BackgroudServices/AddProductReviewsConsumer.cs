@@ -41,7 +41,10 @@ namespace ProductCatalog.Application.BackgroundServices
 
                 commandTask.Wait();
 
-                return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                if (commandTask.Result.IsValid)
+                    return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+
+                return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken);
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {

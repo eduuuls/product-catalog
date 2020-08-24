@@ -6,6 +6,8 @@ using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Events;
 using ProductCatalog.Domain.Interfaces.Repositories;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,6 +25,8 @@ namespace ProductCatalog.Domain.Commands
 
         public async Task<ValidationResult> Handle(AddProductReviewsCommand message, CancellationToken cancellationToken)
         {
+            List<ProductDataChangedEvent> registredEvents = new List<ProductDataChangedEvent>();
+
             LogInfo($"[Handle] Starting handling product reviews creation...");
             
             message.Commands.ForEach(c =>
@@ -51,15 +55,19 @@ namespace ProductCatalog.Domain.Commands
                 {
                     LogInfo($"[Handle] Creating new product review for product: {c.ProductId}");
 
-                    productReview.AddDomainEvent(new ProductDataChangedEvent(productReview.ProductId));
-
                     _productsReviewsRepository.Add(productReview);
                 }
                 else
                     LogInfo($"[Handle] Review already exists!");
 
+                if (!registredEvents.Any(p => p.ProductId == productReview.ProductId))
+                {
+                    var productDataChangedEvent = new ProductDataChangedEvent(productReview.ProductId);
+                    productReview.AddDomainEvent(productDataChangedEvent);
+                    registredEvents.Add(productDataChangedEvent);
+                }
             });
-            
+
             LogInfo($"[Handle] Commiting process...");
 
             return await Commit(_productsReviewsRepository.UnitOfWork);

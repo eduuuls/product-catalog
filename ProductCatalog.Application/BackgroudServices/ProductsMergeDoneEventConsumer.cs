@@ -52,9 +52,12 @@ namespace ProductCatalog.Application.BackgroundServices
                     var commandTask = _mediatorHandler.SendCommand(command);
 
                     commandTask.Wait();
+
+                    if(commandTask.Result.IsValid)
+                        return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
                 }
 
-                return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken);
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {

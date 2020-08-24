@@ -40,6 +40,7 @@ namespace ProductCatalog.Application.Jobs
         {
             LogInfo($"[ProductJobs] Starting Job...");
             var opts = new ParallelOptions() { MaxDegreeOfParallelism = 20 };
+            var categoryUrl = string.Empty;
 
             int numberOfPages = categoryViewModel.NumberOfProducts / CATEGORY_PAGE_SIZE;
 
@@ -52,7 +53,10 @@ namespace ProductCatalog.Application.Jobs
 
             for (int index = 0; index <= numberOfPages; index++)
             {
-                var url = $"{categoryViewModel.Url}/pagina-{index + 1}";
+                if (categoryViewModel.Url.IndexOf("?") != -1)
+                    categoryUrl = categoryViewModel.Url.Insert(categoryViewModel.Url.IndexOf("?"), $"/pagina-{index + 1}");
+                else
+                    categoryUrl = $"{categoryViewModel.Url}/pagina-{index + 1}";
 
                 LogInfo($"[ProductJobs] ImportProducts - Getting products from category:{categoryViewModel.Name}...");
 
@@ -60,7 +64,7 @@ namespace ProductCatalog.Application.Jobs
                 {
                     case DataProvider.Americanas:
 
-                        var americanasProducts = await _americanasExternalService.GetProductsData(categoryViewModel.Id, url);
+                        var americanasProducts = await _americanasExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
 
                         Parallel.ForEach(americanasProducts, opts, async productDTO =>
                         {
@@ -74,7 +78,7 @@ namespace ProductCatalog.Application.Jobs
                         break;
                     case DataProvider.Submarino:
 
-                        var submarinoProducts = await _submarinoExternalService.GetProductsData(categoryViewModel.Id, url);
+                        var submarinoProducts = await _submarinoExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
 
                         Parallel.ForEach(submarinoProducts, opts, async productDTO =>
                         {
@@ -86,7 +90,7 @@ namespace ProductCatalog.Application.Jobs
                         LogInfo($"[ProductJobs] Submarino - Number of obtained products:{submarinoProducts.Count()}");
                         break;
                     case DataProvider.Shoptime:
-                        var shoptimeProducts = await _shoptimeExternalService.GetProductsData(categoryViewModel.Id, url);
+                        var shoptimeProducts = await _shoptimeExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
 
                         Parallel.ForEach(shoptimeProducts, opts, async productDTO =>
                         {

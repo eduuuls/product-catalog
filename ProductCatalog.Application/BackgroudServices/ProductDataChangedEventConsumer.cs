@@ -59,11 +59,13 @@ namespace ProductCatalog.Application.BackgroundServices
                                                                             product.Supplier, product.OtherSpecs, product.ImageUrl, product.DataProvider, product.Reviews);
 
                         var mergeResult = _mediatorHandler.SendCommand(mergeCommand).Result;
+
+                        if (mergeResult.IsValid && updateProductsQueryResult.IsValid)
+                            return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
                     }
                 }
 
-                return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
-
+                return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken);
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {
                 MaxAutoRenewDuration = TimeSpan.FromMinutes(20),
