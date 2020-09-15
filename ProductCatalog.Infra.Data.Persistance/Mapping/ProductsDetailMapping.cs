@@ -18,24 +18,24 @@ namespace ProductCatalog.Infra.Data.Persistance.Mapping
                     .HasMaxLength(50);
             
             builder.Property("BarCode")
-                    .HasColumnType("varchar(500)")
-                    .HasMaxLength(500);
+                    .HasColumnType("varchar(1000)")
+                    .HasMaxLength(1000);
             
             builder.Property("Manufacturer")
-                    .HasColumnType("varchar(200)")
-                    .HasMaxLength(200);
+                    .HasColumnType("varchar(400)")
+                    .HasMaxLength(400);
             
             builder.Property("Supplier")
+                    .HasColumnType("varchar(400)")
+                    .HasMaxLength(400);
+            
+            builder.Property("Model")
                     .HasColumnType("varchar(200)")
                     .HasMaxLength(200);
             
-            builder.Property("Model")
-                    .HasColumnType("varchar(100)")
-                    .HasMaxLength(100);
-            
             builder.Property("ReferenceModel")
-                    .HasColumnType("varchar(100)")
-                    .HasMaxLength(100);
+                    .HasColumnType("varchar(200)")
+                    .HasMaxLength(200);
             
             builder.Property("OtherSpecs")
                     .HasColumnType("varchar(8000)")

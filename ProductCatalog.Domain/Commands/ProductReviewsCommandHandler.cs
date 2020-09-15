@@ -25,6 +25,8 @@ namespace ProductCatalog.Domain.Commands
 
         public async Task<ValidationResult> Handle(AddProductReviewsCommand message, CancellationToken cancellationToken)
         {
+            this.ValidationResult = new ValidationResult();
+
             List<ProductDataChangedEvent> registredEvents = new List<ProductDataChangedEvent>();
 
             LogInfo($"[Handle] Starting handling product reviews creation...");
@@ -32,8 +34,8 @@ namespace ProductCatalog.Domain.Commands
             message.Commands.ForEach(c =>
             {
                 LogInfo($"[Handle] Handling review: {c.ExternalId}");
-
                 LogInfo($"[Handle] Validating review...");
+
                 if (!c.IsValid())
                 {
                     LogInfo($"[Handle] Review didn't pass validation process...");
@@ -56,16 +58,16 @@ namespace ProductCatalog.Domain.Commands
                     LogInfo($"[Handle] Creating new product review for product: {c.ProductId}");
 
                     _productsReviewsRepository.Add(productReview);
+
+                    if (!registredEvents.Any(p => p.ProductId == productReview.ProductId))
+                    {
+                        var productDataChangedEvent = new ProductDataChangedEvent(productReview.ProductId);
+                        productReview.AddDomainEvent(productDataChangedEvent);
+                        registredEvents.Add(productDataChangedEvent);
+                    }
                 }
                 else
                     LogInfo($"[Handle] Review already exists!");
-
-                if (!registredEvents.Any(p => p.ProductId == productReview.ProductId))
-                {
-                    var productDataChangedEvent = new ProductDataChangedEvent(productReview.ProductId);
-                    productReview.AddDomainEvent(productDataChangedEvent);
-                    registredEvents.Add(productDataChangedEvent);
-                }
             });
 
             LogInfo($"[Handle] Commiting process...");

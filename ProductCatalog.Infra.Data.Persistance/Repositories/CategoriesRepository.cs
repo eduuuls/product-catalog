@@ -22,8 +22,9 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories
 
         public async Task<Category> GetByKey(string name, DataProvider dataProvider)
         {
-            var category = await List().FirstOrDefaultAsync(c => c.Name.ToLower() == name.Trim().ToLower()
-                                                                && c.DataProvider == dataProvider);
+            var category = await List().Include(x=> x.Links)
+                                            .FirstOrDefaultAsync(c => c.Name.ToLower() == name.Trim().ToLower()
+                                                                    && c.DataProvider == dataProvider);
 
             return category;
         }
@@ -36,7 +37,7 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories
 
         public async Task<Category> GetById(Guid id)
         {
-            return await List().FirstOrDefaultAsync(c => c.Id == id);
+            return await List().Include(x => x.Links).FirstOrDefaultAsync(c => c.Id == id);
         }
     }
 }

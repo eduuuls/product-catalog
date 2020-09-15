@@ -13,6 +13,11 @@ namespace ProductCatalog.Domain.Commands.Validations
             ValidateExternalId();
             ValidateImageUrl();
             ValidateUrl();
+            ValidateModel();
+            ValidateReferenceModel();
+            ValidateBarCode();
+            ValidateManufacturer();
+            ValidateSupplier();
             ValidateDetailSpecs();
         }
     }

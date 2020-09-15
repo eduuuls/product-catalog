@@ -36,7 +36,7 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         public ExternalService(IHttpClientFactory clientFactory, ILogger logger)
         {
             _httpClient = clientFactory.CreateClient();
-            _httpClient.Timeout = TimeSpan.FromMinutes(3);
+            _httpClient.Timeout = TimeSpan.FromMinutes(1);
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36 Edg/84.0.522.40");
             _logger = logger;
             _random = new Random();
@@ -54,6 +54,8 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                 Thread.Sleep(breathTime);
             }
+
+            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "text/plain");
 
             var response = await RetryPolices.GetRetryPolicy().ExecuteAsync(() =>
             {

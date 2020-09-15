@@ -12,7 +12,7 @@ namespace ProductCatalog.Domain.Interfaces.ExternalServices
         Task<CategoryDTO[]> GetCategoriesData();
         Task<ProductDTO[]> GetProductsData(Guid categoryId, string categoryUrl);
         Task<List<ProductReviewDTO>> GetProductReviews(RequestB2WReviewDTO requestB2WReview);
-        Task<CategoryDTO[]> GetCategoryAdditionalData(CategoryDTO categoryDTO);
+        CategoryLinkDTO[] GetCategoryAdditionalLinks(CategoryDTO categoryDTO);
         Task<ProductDTO> GetProductAdditionalData(Guid categoryId, ProductDTO productDTO);
     }
 }

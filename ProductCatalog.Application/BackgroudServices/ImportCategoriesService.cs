@@ -52,7 +52,7 @@ namespace ProductCatalog.Application.BackgroundServices
             {
                 MaxAutoRenewDuration = TimeSpan.FromMinutes(60),
                 AutoComplete = false,
-                MaxConcurrentCalls = 5
+                MaxConcurrentCalls = 1
             });
 
             return Task.CompletedTask;

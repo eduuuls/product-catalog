@@ -21,5 +21,12 @@ namespace ProductCatalog.Domain.DTO.Query
         public string OtherSpecs { get; set; }
         public IEnumerable<ProductReview> Reviews { get; set; }
         public Category Category { get; set; }
+        public int Recomendations { get; set; }
+        public int Disrecomendations { get; set; }
+        public int FiveStars { get; set; }
+        public int FourStars { get; set; }
+        public int ThreeStars { get; set; }
+        public int TwoStars { get; set; }
+        public int OneStar { get; set; }
     }
 }

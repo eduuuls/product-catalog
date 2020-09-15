@@ -11,7 +11,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using ProductCatalog.Application.Interfaces;
 using ProductCatalog.Application.ViewModels;
-using System.Runtime.CompilerServices;
 
 namespace ProductCatalog.Application.Jobs
 {
@@ -38,74 +37,101 @@ namespace ProductCatalog.Application.Jobs
 
         public async Task ImportProducts(CategoryViewModel categoryViewModel)
         {
+            List<Task> tasks = new List<Task>();
+
             LogInfo($"[ProductJobs] Starting Job...");
             var opts = new ParallelOptions() { MaxDegreeOfParallelism = 20 };
             var categoryUrl = string.Empty;
 
-            int numberOfPages = categoryViewModel.NumberOfProducts / CATEGORY_PAGE_SIZE;
-
-            if (numberOfPages <= 0)
-                numberOfPages = 1;
-            if (numberOfPages > MAX_PAGES)
-                numberOfPages = MAX_PAGES;
-
-            LogInfo($"[ProductJobs] ImportProducts - Getting products...");
-
-            for (int index = 0; index <= numberOfPages; index++)
+            foreach (var categoryLink in categoryViewModel.Links)
             {
-                if (categoryViewModel.Url.IndexOf("?") != -1)
-                    categoryUrl = categoryViewModel.Url.Insert(categoryViewModel.Url.IndexOf("?"), $"/pagina-{index + 1}");
-                else
-                    categoryUrl = $"{categoryViewModel.Url}/pagina-{index + 1}";
+                LogInfo($"[ProductJobs] ImportProducts - Getting products from category link: {categoryLink.Description}");
+                LogInfo($"[ProductJobs] ImportProducts - Link URL: {categoryLink.Url}");
 
-                LogInfo($"[ProductJobs] ImportProducts - Getting products from category:{categoryViewModel.Name}...");
+                int numberOfPages = categoryLink.NumberOfProducts / CATEGORY_PAGE_SIZE;
 
-                switch (categoryViewModel.DataProvider)
+                if (numberOfPages <= 0)
+                    numberOfPages = 1;
+                if (numberOfPages > MAX_PAGES)
+                    numberOfPages = MAX_PAGES;
+
+                for (int index = 0; index < numberOfPages; index++)
                 {
-                    case DataProvider.Americanas:
+                    tasks.Clear();
 
-                        var americanasProducts = await _americanasExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
+                    if (categoryLink.Url.IndexOf("?") != -1)
+                        categoryUrl = categoryLink.Url.Insert(categoryLink.Url.IndexOf("?"), $"/pagina-{index + 1}");
+                    else
+                        categoryUrl = $"{categoryLink.Url}/pagina-{index + 1}";
 
-                        Parallel.ForEach(americanasProducts, opts, async productDTO =>
-                        {
-                            var product = await _americanasExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+                    LogInfo($"[ProductJobs] ImportProducts - Getting products from page: {index + 1}...");
 
-                            await QueueProducts(product);
-                        });
+                    switch (categoryViewModel.DataProvider)
+                    {
+                        case DataProvider.Americanas:
 
-                        LogInfo($"[ProductJobs] Americanas - Number of obtained products:{americanasProducts.Count()}");
+                            var americanasProducts = await _americanasExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
 
-                        break;
-                    case DataProvider.Submarino:
+                            Parallel.ForEach(americanasProducts, opts, productDTO =>
+                            {
+                                var task = Task.Run(async () =>
+                                {
+                                    var product = await _americanasExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
 
-                        var submarinoProducts = await _submarinoExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
+                                    await QueueProducts(product);
+                                });
 
-                        Parallel.ForEach(submarinoProducts, opts, async productDTO =>
-                        {
-                            var product = await _submarinoExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+                                tasks.Add(task);
+                            });
 
-                            await QueueProducts(product);
-                        });
+                            Task.WaitAll(tasks.ToArray());
 
-                        LogInfo($"[ProductJobs] Submarino - Number of obtained products:{submarinoProducts.Count()}");
-                        break;
-                    case DataProvider.Shoptime:
-                        var shoptimeProducts = await _shoptimeExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
+                            LogInfo($"[ProductJobs] Americanas - Number of obtained products:{americanasProducts.Count()}");
 
-                        Parallel.ForEach(shoptimeProducts, opts, async productDTO =>
-                        {
-                            var product = await _shoptimeExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+                            break;
+                        case DataProvider.Submarino:
 
-                            await QueueProducts(product);
-                        });
+                            var submarinoProducts = await _submarinoExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
 
-                        LogInfo($"[ProductJobs] Shoptime - Number of obtained products:{shoptimeProducts.Count()}");
-                        break;
-                    case DataProvider.Buscape:
-                        break;
+                            Parallel.ForEach(submarinoProducts, opts, productDTO =>
+                            {
+                                var task = Task.Run(async () =>
+                                {
+                                    var product = await _submarinoExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+
+                                    await QueueProducts(product);
+                                });
+
+                                tasks.Add(task);
+                            });
+
+                            Task.WaitAll(tasks.ToArray());
+
+                            LogInfo($"[ProductJobs] Submarino - Number of obtained products:{submarinoProducts.Count()}");
+                            break;
+                        case DataProvider.Shoptime:
+                            var shoptimeProducts = await _shoptimeExternalService.GetProductsData(categoryViewModel.Id, categoryUrl);
+
+                            Parallel.ForEach(shoptimeProducts, opts, productDTO =>
+                            {
+                                var task = Task.Run(async () =>
+                                {
+                                    var product = await _shoptimeExternalService.GetProductAdditionalData(categoryViewModel.Id, productDTO);
+
+                                    await QueueProducts(product);
+                                });
+
+                                tasks.Add(task);
+                            });
+
+                            Task.WaitAll(tasks.ToArray());
+
+                            LogInfo($"[ProductJobs] Shoptime - Number of obtained products:{shoptimeProducts.Count()}");
+                            break;
+                    }
                 }
-            }
 
+            }
             LogInfo($"[ProductJobs] ImportProducts - Products imported!");
             
             LogInfo($"[ProductJobs] Job finished...");
@@ -113,24 +139,27 @@ namespace ProductCatalog.Application.Jobs
 
         private async Task QueueProducts(ProductDTO product)
         {
-            var reviews = _mapper.Map<List<ProductReview>>(product.Reviews);
-
-            var command = new CreateNewProductCommand(product.CategoryId, product.ExternalId, product.Name, product.Description,
-                                                 product.BarCode, product.Code, product.Brand, product.Manufacturer, product.Model,
-                                                     product.ReferenceModel, product.Supplier, product.OtherSpecs, product.Url,
-                                                         product.ImageUrl, product.DataProvider, reviews);
-            
-            try
+            if (product != null)
             {
-                LogInfo($"[QueueProducts] Queueing product: {command.Name}");
+                var reviews = _mapper.Map<List<ProductReview>>(product.Reviews);
 
-                await _messagePublisher.Publish(command);
+                var command = new CreateNewProductCommand(product.CategoryId, product.ExternalId, product.Name, product.Description,
+                                                     product.BarCode, product.Code, product.Brand, product.Manufacturer, product.Model,
+                                                         product.ReferenceModel, product.Supplier, product.OtherSpecs, product.Url,
+                                                             product.ImageUrl, product.DataProvider, reviews);
 
-                LogInfo($"[QueueProducts] {command.Name} queued!");
-            }
-            catch (Exception ex)
-            {
-                LogError($"[QueueProducts] Error - {ex.Message}");
+                try
+                {
+                    LogInfo($"[QueueProducts] Queueing product: {command.Name}");
+
+                    await _messagePublisher.Publish(command);
+
+                    LogInfo($"[QueueProducts] {command.Name} queued!");
+                }
+                catch (Exception ex)
+                {
+                    LogError($"[QueueProducts] Error - {ex.Message}");
+                }
             }
         }
     }

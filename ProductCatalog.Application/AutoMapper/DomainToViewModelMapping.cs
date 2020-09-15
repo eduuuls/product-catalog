@@ -18,6 +18,7 @@ namespace ProductCatalog.Application.AutoMapper
             CreateMap<ProductReview, ProductReviewViewModel>();
             CreateMap<CreateNewCategoryCommand, CategoryViewModel>();
             CreateMap<Category, CategoryViewModel>();
+            CreateMap<CategoryLink, CategoryLinkViewModel>();
             CreateMap<CreateNewCategoryCommand, CategoryViewModel>();
             CreateMap<UpdateCategoryCommand, CategoryViewModel>();
             CreateMap<CategoryCreatedEvent, CategoryViewModel>();

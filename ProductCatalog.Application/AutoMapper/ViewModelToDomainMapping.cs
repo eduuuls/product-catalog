@@ -18,6 +18,7 @@ namespace ProductCatalog.Application.AutoMapper
             CreateMap<CategoryViewModel, CreateNewCategoryCommand>();
             CreateMap<CategoryViewModel, UpdateCategoryCommand>();
             CreateMap<CategoryViewModel, Category>();
+            CreateMap<CategoryLinkViewModel, CategoryLink>();
         }
     }
 }

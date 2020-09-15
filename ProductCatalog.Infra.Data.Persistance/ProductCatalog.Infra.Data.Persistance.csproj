@@ -17,6 +17,8 @@
     <Compile Remove="Migrations\20200818003845_AlterColumnReviewTitle.Designer.cs" />
     <Compile Remove="Migrations\20200818011041_AddMaxLengthReviewTitle.cs" />
     <Compile Remove="Migrations\20200818011041_AddMaxLengthReviewTitle.Designer.cs" />
+    <Compile Remove="Migrations\20200825063056_CategoryRelationsLink.cs" />
+    <Compile Remove="Migrations\20200825063056_CategoryRelationsLink.Designer.cs" />
   </ItemGroup>
 
   <ItemGroup>

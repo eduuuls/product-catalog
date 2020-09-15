@@ -12,7 +12,6 @@ namespace ProductCatalog.Domain.Commands.Validations
             RuleFor(c => c.Id)
                 .NotEqual(Guid.Empty);
         }
-
         protected void ValidateName()
         {
             RuleFor(c => c.Name)
@@ -20,7 +19,6 @@ namespace ProductCatalog.Domain.Commands.Validations
                 .NotEqual(string.Empty)
                 .MaximumLength(200);
         }
-
         protected void ValidateExternalId()
         {
             RuleFor(c => c.ExternalId)
@@ -28,13 +26,11 @@ namespace ProductCatalog.Domain.Commands.Validations
                 .NotEqual(string.Empty)
                 .MaximumLength(50);
         }
-
         protected void ValidateDescription()
         {
             RuleFor(c => c.Description)
                 .MaximumLength(300);
         }
-
         protected void ValidateUrl()
         {
             RuleFor(c => c.Url)
@@ -42,13 +38,36 @@ namespace ProductCatalog.Domain.Commands.Validations
                 .NotEqual(string.Empty)
                 .MaximumLength(1000);
         }
-
+        protected void ValidateModel()
+        {
+            RuleFor(c => c.Model)
+                .MaximumLength(200);
+        }
+        protected void ValidateReferenceModel()
+        {
+            RuleFor(c => c.ReferenceModel)
+                .MaximumLength(200);
+        }
+        protected void ValidateBarCode()
+        {
+            RuleFor(c => c.BarCode)
+                .MaximumLength(1000);
+        }
+        protected void ValidateSupplier()
+        {
+            RuleFor(c => c.Supplier)
+                .MaximumLength(400);
+        }
+        protected void ValidateManufacturer()
+        {
+            RuleFor(c => c.Manufacturer)
+                .MaximumLength(400);
+        }
         protected void ValidateDetailSpecs()
         {
             RuleFor(c => c.OtherSpecs)
                 .MaximumLength(8000);
         }
-
         protected void ValidateImageUrl()
         {
             RuleFor(c => c.ImageUrl)

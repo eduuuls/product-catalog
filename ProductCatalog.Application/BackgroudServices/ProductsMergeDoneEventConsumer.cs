@@ -47,14 +47,21 @@ namespace ProductCatalog.Application.BackgroundServices
 
                     var command = new UpdateProductsQueryCommand(product.Id, product.Category, product.Name, product.BarCode, product.Brand, product.Manufacturer, 
                                                                     product.Model, product.RelevancePoints, product.ReferenceModel, product.Supplier, product.OtherSpecs, 
-                                                                        product.ImageUrl, product.DataProvider, product.Reviews);
+                                                                        product.ImageUrl, product.DataProvider, product.Recomendations, product.Disrecomendations, product.FiveStars,
+                                                                        product.FourStars, product.ThreeStars, product.TwoStars, product.OneStar, product.Reviews);
 
                     var commandTask = _mediatorHandler.SendCommand(command);
 
                     commandTask.Wait();
 
-                    if(commandTask.Result.IsValid)
+                    if (commandTask.Result.IsValid)
                         return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                    else
+                    {
+                        var errors = JsonConvert.SerializeObject(commandTask.Result.Errors);
+
+                        return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken, deadLetterReason: errors);
+                    }
                 }
 
                 return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken);

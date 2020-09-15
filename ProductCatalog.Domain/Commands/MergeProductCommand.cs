@@ -8,14 +8,14 @@ namespace ProductCatalog.Domain.Commands
 {
     public class MergeProductCommand : ProductCommand
     {
-        public MergeProductCommand(Guid id, Category category, string name, string barCode, string brand,
+        public MergeProductCommand(Guid id, Guid categoryId, string name, string barCode, string brand,
                                             string manufacturer, string model, int relevancePoints, string referenceModel,
                                                 string supplier, string otherSpecs, string imageUrl, DataProvider dataProvider,
                                                     IEnumerable<ProductReview> reviews)
                : base(MessageDestination.DomainMessage, typeof(MergeProductCommand).Name)
         {
             Id = id;
-            Category = category;
+            CategoryId = categoryId;
             Name = name;
             ImageUrl = imageUrl;
             DataProvider = dataProvider;

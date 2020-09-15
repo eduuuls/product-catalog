@@ -15,17 +15,17 @@ namespace ProductCatalog.Domain.Commands
         {
 
         }
-        public UpdateCategoryCommand(string name, string description, string url, string imageUrl, 
-                                            bool isActive, int numberOfProducts, DataProvider dataProvider)
+        public UpdateCategoryCommand(string name, string description, string imageUrl, bool isActive, 
+                                        int numberOfProducts, DataProvider dataProvider, IEnumerable<CategoryLink> links)
             : base(MessageDestination.DomainMessage, typeof(CreateNewCategoryCommand).Name)
         {
             Name = name;
             Description = description;
-            Url = url;
             ImageUrl = imageUrl;
             IsActive = isActive;
             NumberOfProducts = numberOfProducts;
             DataProvider = dataProvider;
+            Links = links;
         }
 
         public override bool IsValid()

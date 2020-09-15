@@ -65,9 +65,9 @@ namespace ProductCatalog.Application.BackgroundServices
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {
-                MaxAutoRenewDuration = TimeSpan.FromMinutes(60),
+                MaxAutoRenewDuration = TimeSpan.FromMinutes(120),
                 AutoComplete = false,
-                MaxConcurrentCalls = 1
+                MaxConcurrentCalls = 2
             }) ;
 
             return Task.CompletedTask;

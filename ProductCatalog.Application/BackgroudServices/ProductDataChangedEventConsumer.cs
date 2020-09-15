@@ -47,21 +47,30 @@ namespace ProductCatalog.Application.BackgroundServices
 
                     if (product != null)
                     {
-
-                        var updateCommand = new UpdateProductsQueryCommand(product.Id, product.Category, product.Name, product.BarCode, product.Brand,
-                                                                        product.Manufacturer, product.Model, product.RelevancePoints, product.ReferenceModel,
-                                                                            product.Supplier, product.OtherSpecs, product.ImageUrl, product.DataProvider, product.Reviews);
-
-                        var updateProductsQueryResult = _mediatorHandler.SendCommand(updateCommand).Result;
-
-                        var mergeCommand = new MergeProductCommand(product.Id, product.Category, product.Name, product.BarCode, product.Brand,
-                                                                        product.Manufacturer, product.Model, product.RelevancePoints, product.ReferenceModel,
-                                                                            product.Supplier, product.OtherSpecs, product.ImageUrl, product.DataProvider, product.Reviews);
+                        var mergeCommand = new MergeProductCommand(product.Id, product.Category.Id, product.Name, product.BarCode, product.Brand, product.Manufacturer, 
+                                                                        product.Model, product.RelevancePoints, product.ReferenceModel, product.Supplier, product.OtherSpecs, 
+                                                                            product.ImageUrl, product.DataProvider, product.Reviews);
+                        
+                        var command = new UpdateProductsQueryCommand(product.Id, product.Category, product.Name, product.BarCode, product.Brand, product.Manufacturer,
+                                                                        product.Model, product.RelevancePoints, product.ReferenceModel, product.Supplier, product.OtherSpecs,
+                                                                            product.ImageUrl, product.DataProvider, product.Recomendations, product.Disrecomendations, product.FiveStars,
+                                                                                product.FourStars, product.ThreeStars, product.TwoStars, product.OneStar, product.Reviews);
 
                         var mergeResult = _mediatorHandler.SendCommand(mergeCommand).Result;
 
-                        if (mergeResult.IsValid && updateProductsQueryResult.IsValid)
-                            return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                        if (mergeResult.IsValid)
+                        {
+                            var updateProductsQueryResult = _mediatorHandler.SendCommand(command).Result;
+                            
+                            if (updateProductsQueryResult.IsValid)
+                                return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                        }
+                        else
+                        {
+                            var errors = JsonConvert.SerializeObject(mergeResult.Errors);
+
+                            return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken, deadLetterReason: errors);
+                        }
                     }
                 }
 

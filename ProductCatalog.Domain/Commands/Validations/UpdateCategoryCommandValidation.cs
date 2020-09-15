@@ -9,7 +9,6 @@ namespace ProductCatalog.Domain.Commands.Validations
         public UpdateCategoryCommandValidation()
         {
             ValidateName();
-            ValidateUrl();
         }
     }
 }

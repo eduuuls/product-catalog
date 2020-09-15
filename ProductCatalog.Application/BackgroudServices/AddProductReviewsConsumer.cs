@@ -43,8 +43,12 @@ namespace ProductCatalog.Application.BackgroundServices
 
                 if (commandTask.Result.IsValid)
                     return _subscriptionClient.CompleteAsync(message.SystemProperties.LockToken);
+                else
+                {
+                    var errors = JsonConvert.SerializeObject(commandTask.Result.Errors);
 
-                return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken);
+                    return _subscriptionClient.DeadLetterAsync(message.SystemProperties.LockToken, deadLetterReason: errors);
+                }
 
             }, new MessageHandlerOptions(args => Task.CompletedTask)
             {

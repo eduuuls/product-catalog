@@ -50,7 +50,6 @@ namespace ProductCatalogApi
             services.AddHostedService<CreateCategoriesConsumer>();
             services.AddHostedService<CreateProductsConsumer>();
             services.AddHostedService<AddProductReviewsConsumer>();
-            services.AddHostedService<ProductsMergeDoneEventConsumer>();
             services.AddHostedService<ProductDataChangedEventConsumer>();
 
             var logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger();

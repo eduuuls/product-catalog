@@ -19,10 +19,10 @@ namespace ProductCatalog.Domain.Commands.Validations
                 .NotEqual(string.Empty);
         }
 
-        protected void ValidateUrl()
+        protected void ValidateLinks()
         {
-            RuleFor(c => c.Url)
-                .NotEqual(string.Empty);
+            RuleFor(c => c.Links)
+                .NotEmpty();
         }
     }
 }

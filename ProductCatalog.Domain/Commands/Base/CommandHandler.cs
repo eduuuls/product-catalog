@@ -32,8 +32,10 @@ namespace ProductCatalog.Domain.Commands.Base
             }
             catch (Exception ex)
             {
-
                 AddError(ex.Message);
+
+                if (ex.InnerException != null)
+                    AddError(ex.InnerException.Message);
             }
 
             return ValidationResult;

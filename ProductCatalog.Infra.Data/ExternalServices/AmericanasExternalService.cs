@@ -13,12 +13,14 @@ namespace ProductCatalog.Infra.Data.ExternalServices
         public AmericanasExternalService(ILogger<AmericanasExternalService> logger, 
                                             IHttpClientFactory httpClientFactory,
                                                 IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
+                                                    IOptions<FirebaseConfiguration> firebaseConfiguration,
                                                     ChromeOptions chromeOptions) 
             : base(httpClientFactory,
                     logger,
                         chromeOptions,
-                            externalServicesConfiguraiton, 
-                                DataProvider.Americanas)
+                            externalServicesConfiguraiton,
+                                firebaseConfiguration,
+                                    DataProvider.Americanas)
         {
             
         }

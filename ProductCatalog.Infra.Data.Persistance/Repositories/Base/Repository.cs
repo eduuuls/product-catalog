@@ -24,14 +24,14 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories.Base
             _entity = _context.Set<T>();
         }
 
-        public void Add(T entidade)
+        public void Add(T entity)
         {
-            _entity.Add(entidade);
+            _entity.Add(entity);
         }
 
-        public void Update(T entidade)
+        public void Update(T entity)
         {
-            _entity.Update(entidade);
+            _entity.Update(entity);
         }
 
         public void UpdateRange(T[] entities)
@@ -40,9 +40,9 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories.Base
         }
         public T Search(params int[] id)
         {
-            var entidade = _entity.Find(id[0]);
-            _context.Entry(entidade).State = EntityState.Detached;
-            return entidade;
+            var entity = _entity.Find(id[0]);
+            _context.Entry(entity).State = EntityState.Detached;
+            return entity;
         }
 
         public void Delete(params int[] id)
@@ -50,9 +50,14 @@ namespace ProductCatalog.Infra.Data.Persistance.Repositories.Base
             Delete(Search(id));
         }
 
-        public void Delete(T entidade)
+        public void Delete(T entity)
         {
-            _entity.Remove(entidade);
+            _entity.Remove(entity);
+        }
+
+        public void Delete(T[] entities)
+        {
+            _entity.RemoveRange(entities);
         }
 
         public IQueryable<T> List()

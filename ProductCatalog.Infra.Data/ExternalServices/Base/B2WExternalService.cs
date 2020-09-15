@@ -1,4 +1,6 @@
-﻿using HtmlAgilityPack;
+﻿using Firebase.Auth;
+using Firebase.Storage;
+using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -8,6 +10,7 @@ using ProductCatalog.Domain.DTO;
 using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Enums;
 using ProductCatalog.Domain.Interfaces.ExternalServices;
+using ProductCatalog.Infra.CrossCutting.Extensions;
 using ScrapySharp.Extensions;
 using System;
 using System.Collections.Concurrent;
@@ -15,6 +18,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -25,20 +29,25 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
         private readonly WebsiteConfiguration _websiteConfiguration;
         private readonly ChromeOptions _chromeOptions;
         private readonly DataProvider _dataProvider;
+        private readonly FirebaseConfiguration _firebaseConfiguration;
+        private readonly FirebaseAuthProvider _firebaseAuthProvider;
+        private readonly FirebaseAuthLink _authLink;
 
         public B2WExternalService(IHttpClientFactory httpClientFactory,
                                     ILogger logger,
                                     ChromeOptions chromeOptions,
                                         IOptions<ExternalServicesConfiguraiton> externalServicesConfiguraiton,
-                                            DataProvider dataProvider) : base(httpClientFactory, logger)
+                                            IOptions<FirebaseConfiguration> firebaseConfiguration,
+                                                DataProvider dataProvider) : base(httpClientFactory, logger)
         {
+            _firebaseConfiguration = firebaseConfiguration.Value;
+            _firebaseAuthProvider = new FirebaseAuthProvider(new FirebaseConfig(_firebaseConfiguration.Apikey));
             _dataProvider = dataProvider;
             _chromeOptions = chromeOptions;
             _websiteConfiguration = externalServicesConfiguraiton.Value?
                                             .WebsiteConfigurations?
                                                 .FirstOrDefault(w => w.Key == dataProvider.ToString());
-
-
+            _authLink = _firebaseAuthProvider.SignInWithEmailAndPasswordAsync(_firebaseConfiguration.AuthEmail, _firebaseConfiguration.AuthPassword).Result;
         }
         public async Task<CategoryDTO[]> GetCategoriesData()
         {
@@ -54,31 +63,41 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 _logger.LogInformation($"[GetCategoriesData] Acessing URL...");
                 var responseHtml = await ExecuteHtmlRequest(requestUrl, false);
 
-                var resultHtml = responseHtml.CssSelect("#sitemap-pane-categoria")
-                                                .CssSelect(".sitemap-block")
-                                                    .FirstOrDefault();
-                
                 _logger.LogInformation($"[GetCategoriesData] Extracting result elements...");
 
-                resultHtml?.FirstChild
-                            .ChildNodes
-                                .ToList()
-                                    .ForEach(c =>
-                                    {
-                                        if (c.LastChild.Name == "ul" && c.LastChild.HasChildNodes)
-                                            htmlNodes.AddRange(c.LastChild.ChildNodes);
-                                    });
-
+                htmlNodes = responseHtml.CssSelect("#sitemap-pane-categoria")
+                                                .FirstOrDefault()
+                                                    .FirstChild
+                                                        .CssSelect(".sitemap-list")
+                                                            .FirstOrDefault()
+                                                                .ChildNodes
+                                                                    .ToList();
+                
+                
                 _logger.LogInformation($"[GetCategoriesData] Number of elements: {htmlNodes.Count}");
                 _logger.LogInformation($"[GetCategoriesData] Converting resulting elements...");
 
-                Parallel.ForEach(htmlNodes, element =>
-                {                  
-                    var categoryElement = element.FirstChild
-                                                       .CssSelect("a")
-                                                           .FirstOrDefault();
+                Parallel.ForEach(htmlNodes, categoryElement =>
+                {
+                    CategoryDTO productCategory = new CategoryDTO();
+                    List<CategoryLinkDTO> categoryLinks = new List<CategoryLinkDTO>();
+                    productCategory.DataProvider = _dataProvider;
+                    productCategory.Name = HttpUtility.HtmlDecode(categoryElement.FirstChild.InnerText);
+                    
+                    _logger.LogInformation($"[ConvertHtmlToCategory] Got category: {productCategory.Name}!");
 
-                    categoriesToAdd.Push(ConvertHtmlToCategory(categoryElement));
+                    foreach (var categoryLinkElement in categoryElement.LastChild.ChildNodes)
+                    {
+                        var element = categoryLinkElement.Name == "li" ? categoryLinkElement.FirstChild.CssSelect("a").FirstOrDefault(): categoryLinkElement;
+
+                        var url = HttpUtility.UrlDecode(string.Concat(_websiteConfiguration.BaseAdress, element.GetAttributeValue("href")));
+
+                        categoryLinks.Add(new CategoryLinkDTO() { Url = url, Description = HttpUtility.HtmlDecode(element.InnerText.Trim()) });
+                    }
+
+                    productCategory.Links = categoryLinks;
+                    
+                    categoriesToAdd.Push(productCategory);
                 });
                 
                 _logger.LogInformation($"[GetCategoriesData] Number of obtained categories:{categoriesToAdd.Count}");
@@ -151,11 +170,10 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 _logger.LogInformation($"[GetProductsData] Extracting result elements...");
 
                 resultElements = response.CssSelect("div[class$=main-grid]")
-                                            .FirstOrDefault()
-                                            .CssSelect("div[class^=product-v2__ProductCardV2]")
+                                            .CssSelect("div[class^=product-grid-item]")
                                             .Select(element =>
                                             {
-                                                return element.LastChild.FirstChild;
+                                                return element.FirstChild.LastChild.FirstChild;
                                             })
                                             .ToList();
 
@@ -250,68 +268,72 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
             return reviewsToAdd.ToList();
         }
-        public async Task<CategoryDTO[]> GetCategoryAdditionalData(CategoryDTO categoryDTO)
+        public CategoryLinkDTO[] GetCategoryAdditionalLinks(CategoryDTO categoryDTO)
         {
-            ConcurrentStack<CategoryDTO> resultCategories = new ConcurrentStack<CategoryDTO>();
+            ConcurrentStack<CategoryLinkDTO> resultCategoryLinks = new ConcurrentStack<CategoryLinkDTO>();
 
-            try
+            _logger.LogInformation($"[GetCategoryAdditionalLinks][{categoryDTO.Name}] Getting additional links...");
+
+            Parallel.ForEach(categoryDTO.Links, categoryLink =>
             {
-                _logger.LogInformation($"[GetCategoryAdditionalData][{categoryDTO.Name}] Getting additional data...");
-
-                var responseHtml = await ExecuteHtmlRequest(categoryDTO.Url);
-
-                if (responseHtml.CssSelect("div[class$=main-grid]").Any())
+                try
                 {
-                    var productCountElement = responseHtml.CssSelect(".sidebarFooter-product-count")
-                                                                .FirstOrDefault();
+                    var responseHtml = ExecuteHtmlRequest(categoryLink.Url).Result;
 
-                    if (productCountElement != null)
+                    if (responseHtml.CssSelect("div[class$=main-grid]").Any())
                     {
-                        var strProductCount = string.Join("", productCountElement.InnerText.Trim().ToCharArray().Where(Char.IsDigit));
+                        var productCountElement = responseHtml.CssSelect(".sidebarFooter-product-count")
+                                                                    .FirstOrDefault();
 
-                        categoryDTO.NumberOfProducts = Convert.ToInt32(strProductCount);
+                        if (productCountElement != null)
+                        {
+                            var strProductCount = string.Join("", productCountElement.InnerText.Trim().ToCharArray().Where(Char.IsDigit));
 
-                        _logger.LogInformation($"[{categoryDTO.Name}] The category has {strProductCount} products!");
+                            categoryLink.NumberOfProducts = Convert.ToInt32(strProductCount);
+
+                            _logger.LogInformation($"[{categoryLink.Description}] The category link has {strProductCount} products!");
+                        }
+
+                        _logger.LogInformation($"[{categoryLink.Description}] Adding category link to list...");
+
+                        resultCategoryLinks.Push(categoryLink);
                     }
-
-                    _logger.LogInformation($"[{categoryDTO.Name}] Adding category to list...");
-
-                    resultCategories.Push(categoryDTO);
-                }
-                else if (responseHtml.CssSelect("#collapse-categorias").Any())
-                {
-                    var subCategoriesElements = responseHtml.CssSelect("#collapse-categorias")
-                                                            .FirstOrDefault()
-                                                            .CssSelect("ul[class=filter-list]")
-                                                            .FirstOrDefault()
-                                                            .CssSelect("li[class=filter-list-item]")
-                                                            .Select(element => element.FirstChild)
-                                                            .ToList();
-
-                    foreach(var subCategoryElement in subCategoriesElements )
+                    else if (responseHtml.CssSelect("#collapse-categorias").Any())
                     {
-                        var subCategory = ConvertHtmlToCategory(subCategoryElement, categoryDTO.Name);
+                        var subCategoriesElements = responseHtml.CssSelect("#collapse-categorias")
+                                                                .FirstOrDefault()
+                                                                .CssSelect("ul[class=filter-list]")
+                                                                .FirstOrDefault()
+                                                                .CssSelect("li[class=filter-list-item]")
+                                                                .Select(element => element.FirstChild)
+                                                                .ToList();
 
-                        var subCategories = await GetCategoryAdditionalData(subCategory);
 
-                        if (subCategories.Any())
-                            resultCategories.PushRange(subCategories);
-                    };
+                        var links = subCategoriesElements.Select(sub => ConvertHtmlToCategoryLink(sub, categoryDTO.Name));
+
+                        if (!links.Any(link => link.Description == categoryLink.Description))
+                        {
+                            var categoryLinks = GetCategoryAdditionalLinks(new CategoryDTO() { Name = categoryDTO.Name, Links = links });
+
+                            if (categoryLinks.Any())
+                                resultCategoryLinks.PushRange(categoryLinks);
+                        }
+                    }
                 }
-            }
-            catch(Exception ex)
-            {
-                _logger.LogError(ex, "[GetCategoryAdditionalData] Error occurred while converting element to category.");
-            }
-            finally
-            {
-                GC.Collect();
-            }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[GetCategoryAdditionalLinks] Error occurred while getting additional links.");
+                }
+                finally
+                {
+                    GC.Collect();
+                }
+            });
 
-            if (!resultCategories.Any())
-                _logger.LogInformation($"[GetCategoryAdditionalData] Empty Category: {JsonConvert.SerializeObject(categoryDTO, new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore })}");
+            if (!resultCategoryLinks.Any())
+                _logger.LogInformation($"[GetCategoryAdditionalLinks] Category has no links: {JsonConvert.SerializeObject(categoryDTO, new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore })}");
 
-            return resultCategories.ToArray();
+            return resultCategoryLinks.ToArray();
         }
         public async Task<ProductDTO> GetProductAdditionalData(Guid categoryId, ProductDTO productDTO)
         {
@@ -326,7 +348,18 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                 var image = detailResponse.CssSelect("meta[property='og:image']").FirstOrDefault();
 
                 if (image != null)
-                    productDTO.ImageUrl = image.GetAttributeValue("content");
+                {
+                    var imageUrl = image.GetAttributeValue("content");
+
+                    if (!string.IsNullOrEmpty(imageUrl))
+                    {
+                        _logger.LogInformation($"[Handle] Processing product image URL...");
+                        productDTO.ImageUrl = await UploadImageToFirebase(productDTO, imageUrl);
+                        _logger.LogInformation($"[Handle] Image URL process succeed...");
+                    }
+                }
+                else
+                    return null;
 
                 var techSpecs = detailResponse.CssSelect("table[class^=TableUI]")
                                                     .CssSelect("tr[class^=Tr]")
@@ -339,6 +372,16 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                                                                 return new KeyValuePair<string, string>(key, value);
                                                             }).ToList();
 
+                var hasUniqueConstraintInfo = techSpecs.Any(t => t.Key.ToUpper().Contains("FABRICANTE") || t.Key.ToUpper().Contains("MARCA")) && 
+                                                techSpecs.Any(t => t.Key.ToUpper().Contains("MODELO")|| t.Key.ToUpper().Contains("REFERÊNCIA DO MODELO"));
+
+                if (!hasUniqueConstraintInfo)
+                {
+                    _logger.LogInformation($"[GetProductAdditionalData] Product does not meet the minimum requirements.");
+                    _logger.LogInformation(JsonConvert.SerializeObject(techSpecs));
+                    return null;
+                }
+
                 await Task.Run(() =>
                 {
                     var barCode = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("CÓDIGO DE BARRAS"));
@@ -347,10 +390,12 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                     var model = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("MODELO"));
                     productDTO.Model = HttpUtility.HtmlDecode(model.Value);
+                    productDTO.Model = !string.IsNullOrEmpty(productDTO.Model) ? productDTO.Model.Trim() : productDTO.Model;
                     techSpecs.Remove(model);
 
                     var brand = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("MARCA"));
                     productDTO.Brand = HttpUtility.HtmlDecode(brand.Value);
+                    productDTO.Brand = !string.IsNullOrEmpty(productDTO.Brand) ? productDTO.Brand.Trim() : productDTO.Brand;
                     techSpecs.Remove(brand);
 
                     var code = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("CÓDIGO"));
@@ -359,14 +404,17 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                     var manufacturer = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("FABRICANTE"));
                     productDTO.Manufacturer = HttpUtility.HtmlDecode(manufacturer.Value);
+                    productDTO.Manufacturer = !string.IsNullOrEmpty(productDTO.Manufacturer) ? productDTO.Manufacturer.Trim() : productDTO.Manufacturer;
                     techSpecs.Remove(manufacturer);
 
                     var referenceModel = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("REFERÊNCIA DO MODELO"));
                     productDTO.ReferenceModel = HttpUtility.HtmlDecode(referenceModel.Value);
+                    productDTO.ReferenceModel = !string.IsNullOrEmpty(productDTO.ReferenceModel) ? productDTO.ReferenceModel.Trim(): productDTO.ReferenceModel;
                     techSpecs.Remove(referenceModel);
 
                     var supplier = techSpecs.FirstOrDefault(t => t.Key.ToUpper().Equals("FORNECEDOR"));
                     productDTO.Supplier = HttpUtility.HtmlDecode(supplier.Value);
+                    productDTO.Supplier = !string.IsNullOrEmpty(productDTO.Supplier) ? productDTO.Supplier.Trim() : productDTO.Supplier;
                     techSpecs.Remove(supplier);
 
                     ConcurrentDictionary<string, string> specs = new ConcurrentDictionary<string, string>();
@@ -387,25 +435,17 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
             return productDTO;
         }
-        private CategoryDTO ConvertHtmlToCategory(HtmlNode categoryElement, string categoryName = null)
+        private CategoryLinkDTO ConvertHtmlToCategoryLink(HtmlNode categoryElement, string categoryName = null)
         {
-            CategoryDTO productCategory = new CategoryDTO();
+            var url = categoryElement.GetAttributeValue("href");
 
-            if (!string.IsNullOrEmpty(categoryName))
+            url = url.Substring(0, url.IndexOf("?"));
+
+            return new CategoryLinkDTO()
             {
-                productCategory.Name = categoryName;
-                productCategory.SubType = HttpUtility.HtmlDecode(categoryElement.InnerText.Trim());
-            }
-            else
-                productCategory.Name = HttpUtility.HtmlDecode(categoryElement.InnerText.Trim());
-
-            _logger.LogInformation($"[ConvertHtmlToCategory] Got category: {productCategory.Name}!");
-
-            productCategory.DataProvider = _dataProvider;
-
-            productCategory.Url = HttpUtility.UrlDecode(string.Concat(_websiteConfiguration.BaseAdress, categoryElement.GetAttributeValue("href")));
-
-            return productCategory;
+                Url = string.Concat(_websiteConfiguration.BaseAdress, url),
+                Description = HttpUtility.HtmlDecode(categoryElement.InnerText.Trim())
+            };
         }
         private ProductDTO ConvertHtmlToProduct(Guid categoryId, HtmlNode productElement)
         {
@@ -433,6 +473,55 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
             _logger.LogInformation($"[ConvertHtmlToProduct] Got product: {product.Name}!");
 
             return product;
+        }
+        private async Task<string> UploadImageToFirebase(ProductDTO product, string imageUrl)
+        {
+            FirebaseStorageOptions firebaseStorageOptions = new FirebaseStorageOptions();
+            var cancelationToken = new CancellationTokenSource();
+            string resultUrl = string.Empty;
+
+            _logger.LogInformation($"[Handle] Acessing image URL from external data provider...");
+
+            var imageStream = await ExecuteImageRequest(imageUrl);
+
+            if (imageStream != null)
+            {
+                _logger.LogInformation($"[Handle] Got image stream!");
+                _logger.LogInformation($"[Handle] Authenticating on Firebase...");
+
+                if (_authLink.IsExpired())
+                {
+                    _logger.LogInformation($"[Handle] Firebase token expired. Getting fresh token...");
+                    var authLink = await _authLink.GetFreshAuthAsync();
+                    firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(authLink.FirebaseToken);
+                }
+                else
+                    firebaseStorageOptions.AuthTokenAsyncFactory = () => Task.FromResult(_authLink.FirebaseToken);
+
+                firebaseStorageOptions.ThrowOnCancel = true;
+
+                _logger.LogInformation($"[Handle] Authentication was successful!");
+
+                var storage = new FirebaseStorage(_firebaseConfiguration.StorageBucketUrl, firebaseStorageOptions);
+
+                var imageExtension = imageUrl.Split(".").Last();
+
+                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Requesting image from URL...");
+
+                resultUrl = await storage.Child("images")
+                                            .Child("products")
+                                                .Child($"Category-{product.CategoryId}")
+                                                    .Child($"{product.ExternalId}.{imageExtension}").PutAsync(imageStream);
+
+                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Image uploaded to Firebase successfully!");
+                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Firebase image URL: {resultUrl}.");
+            }
+            else
+            {
+                _logger.LogInformation($"[UploadImageToFirebase][{product.ExternalId} - {product.Name}] Image not found at URL: {imageUrl}.");
+            }
+
+            return resultUrl;
         }
     }
 }

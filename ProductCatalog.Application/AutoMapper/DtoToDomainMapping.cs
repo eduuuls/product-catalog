@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using ProductCatalog.Domain.DTO;
 using ProductCatalog.Domain.Entities;
 
 namespace ProductCatalog.Application.AutoMapper
@@ -8,6 +9,8 @@ namespace ProductCatalog.Application.AutoMapper
         public DtoToDomainMapping()
         {
             CreateMap<ProductReviewDTO, ProductReview>();
+            CreateMap<CategoryDTO, Category>();
+            CreateMap<CategoryLinkDTO, CategoryLink>();
         }
     }
 }

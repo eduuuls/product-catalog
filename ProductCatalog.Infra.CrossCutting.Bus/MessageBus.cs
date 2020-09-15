@@ -52,7 +52,7 @@ namespace ProductCatalog.Infra.CrossCutting.Bus
 
             try
             {
-                var messageBody = JsonConvert.SerializeObject(obj);
+                var messageBody = JsonConvert.SerializeObject(obj, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
 
                 var message = new Message(body: Encoding.UTF8.GetBytes(messageBody.Compress()));
 
