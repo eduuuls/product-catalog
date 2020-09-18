@@ -17,7 +17,7 @@ namespace ProductCatalog.Application.Jobs
     public class ProductJob : Base.BaseJob, IProductJob
     {
         private const int CATEGORY_PAGE_SIZE = 24;
-        private const int MAX_PAGES = 20;
+        private const int MAX_PAGES = 200;
 
         private readonly IShoptimeExternalService _shoptimeExternalService;
         private readonly IAmericanasExternalService _americanasExternalService;

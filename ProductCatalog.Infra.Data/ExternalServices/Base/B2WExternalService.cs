@@ -345,22 +345,6 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
 
                 var detailResponse = await ExecuteHtmlRequest(productDTO.Url);
 
-                var image = detailResponse.CssSelect("meta[property='og:image']").FirstOrDefault();
-
-                if (image != null)
-                {
-                    var imageUrl = image.GetAttributeValue("content");
-
-                    if (!string.IsNullOrEmpty(imageUrl))
-                    {
-                        _logger.LogInformation($"[Handle] Processing product image URL...");
-                        productDTO.ImageUrl = await UploadImageToFirebase(productDTO, imageUrl);
-                        _logger.LogInformation($"[Handle] Image URL process succeed...");
-                    }
-                }
-                else
-                    return null;
-
                 var techSpecs = detailResponse.CssSelect("table[class^=TableUI]")
                                                     .CssSelect("tr[class^=Tr]")
                                                         .Where(t => t.ChildNodes.Count == 2)
@@ -381,6 +365,22 @@ namespace ProductCatalog.Infra.Data.ExternalServices.Base
                     _logger.LogInformation(JsonConvert.SerializeObject(techSpecs));
                     return null;
                 }
+
+                var image = detailResponse.CssSelect("meta[property='og:image']").FirstOrDefault();
+
+                if (image != null)
+                {
+                    var imageUrl = image.GetAttributeValue("content");
+
+                    if (!string.IsNullOrEmpty(imageUrl))
+                    {
+                        _logger.LogInformation($"[Handle] Processing product image URL...");
+                        productDTO.ImageUrl = await UploadImageToFirebase(productDTO, imageUrl);
+                        _logger.LogInformation($"[Handle] Image URL process succeed...");
+                    }
+                }
+                else
+                    return null;
 
                 await Task.Run(() =>
                 {
