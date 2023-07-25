@@ -1,18 +1,15 @@
 # Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+Este projeto se trata de um "Web Crawler/Scraper" e tem como finalidade varrer os principais sites de e-commerce nacionais para mapear categorias e produtos listados, construindo uma base de dados que resultara em um catálogo rico de produtos e suas respectivas informações técnicas. 
 
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+Neste projeto destaca-se o uso  das seguintes ferramentas:
+1.	.NET Core 3.1
+2.	Asp.NET Core WebAPI
+3.	Selenium
+4.	Azure ServiceBus
+5.	Docker
+6.	BackgroundService (.NET)
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
-
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
 
 If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
 - [ASP.NET Core](https://github.com/aspnet/Home)
