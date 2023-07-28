@@ -1,5 +1,5 @@
 # Introduction 
-Este projeto se trata de um "Web Crawler/Scraper" e tem como finalidade varrer os principais sites de e-commerce nacionais para mapear categorias e produtos listados, construindo uma base de dados que resultara em um catálogo rico de produtos e suas respectivas informações técnicas. 
+Este projeto visa desenvolver um "Web Crawler/Scraper" que possibilite varrer os principais sites de e-commerce nacionais para mapear categorias e produtos listados, construindo uma base de dados que resultara em um catálogo rico de produtos e suas respectivas informações técnicas.
 
 # Getting Started
 Neste projeto destaca-se o uso  das seguintes ferramentas:
